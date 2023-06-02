@@ -6,34 +6,13 @@ import express from "express";
 import User from "./models/User.js";
 import Card from "./models/Card.js";
 import Board from "./models/Board.js";
+import Label from "./models/Label.js";
 
 mongoose.connect("mongodb://127.0.0.1:27017/userDB");
 const app = express();
 app.use(cors());
 var jsonParser = bodyParser.json();
 
-/***************************** All GET methods *****************************/
-
-app.get("/", async function (req, res) {
-  const filter = {};
-  const all = await User.find(filter);
-  res.json(all);
-});
-app.get("/register", async function (req, res) {
-  const filter = {};
-  const all = await User.find(filter);
-  res.json(all);
-});
-app.get("/board", async function (req, res) {
-  const filter = { userId: "645d1cd8039320f78d51f4a7" };
-  const allBoards = await Board.find(filter);
-  res.json(allBoards);
-});
-app.get("/card", async function (req, res) {
-  const filter = { boardId: req.query.boardId };
-  const all = await Card.find(filter);
-  res.json(all);
-});
 /***************************** All POST methods *****************************/
 app.post("/login", jsonParser, async function (req, res) {
   const filter = { email: req.body.email, password: req.body.password };
@@ -81,6 +60,69 @@ app.post("/card", jsonParser, async function (req, res) {
   await newCard.save();
   res.json(newCard.toJSON());
 });
+
+app.post("/label", jsonParser, async function (req, res) {
+  const { colour, cardId } = req.body;
+  const card = await Card.findById(cardId);
+  const cardWithLabels = await card.populate("labels");
+
+  const labelExists = cardWithLabels.labels.some(
+    (label) => label.colour === colour
+  );
+  if (labelExists) {
+    res.json(cardWithLabels);
+    return;
+  }
+  const newLabel = new Label({
+    colour: colour,
+    cardId: cardId,
+  });
+  await newLabel.save();
+
+  card.labels.push(newLabel._id);
+  await card.save();
+  const cardsToReturn = await card.populate("labels");
+  res.json(cardsToReturn.toJSON());
+});
+/***************************** All GET methods *****************************/
+
+app.get("/", async function (req, res) {
+  const filter = {};
+  const all = await User.find(filter);
+  res.json(all);
+});
+app.get("/register", async function (req, res) {
+  const filter = {};
+  const all = await User.find(filter);
+  res.json(all);
+});
+app.get("/board", async function (req, res) {
+  const filter = { userId: "645d1cd8039320f78d51f4a7" };
+  const allBoards = await Board.find(filter);
+  res.json(allBoards);
+});
+app.get("/card", async function (req, res) {
+  const filter = { boardId: req.query.boardId };
+  const all = await Card.find(filter).populate("labels");
+  res.json(all);
+});
+app.get("/label", async function (req, res) {
+  const filter = { cardId: req.query.cardId };
+  const all = await Label.find(filter);
+  res.json(all);
+});
+
+/***************************** All PATCH methods *****************************/
+app.patch("/card", jsonParser, async function (req, res) {
+  const filter = { _id: req.body.id };
+  const update = { status: req.body.status };
+
+  const card = await Card.findOneAndUpdate(filter, update, {
+    new: true,
+  });
+  res.json(card);
+});
+
 /***************************** All DELETE methods *****************************/
 app.delete("/board", async function (req, res) {
   const id = req.query.id;
@@ -93,17 +135,13 @@ app.delete("/board", async function (req, res) {
 app.delete("/card", async function (req, res) {
   const id = req.query.id;
   await Card.deleteOne({ _id: id });
+  await Label.deleteMany({ cardId: id });
   res.sendStatus(200);
 });
-/***************************** All PATCH methods *****************************/
-app.patch("/card", jsonParser, async function (req, res) {
-  const filter = { _id: req.body.id };
-  const update = { status: req.body.status };
-
-  const card = await Card.findOneAndUpdate(filter, update, {
-    new: true,
-  });
-  res.json(card);
+app.delete("/label", async function (req, res) {
+  const id = req.query.id;
+  await Label.deleteOne({ _id: id });
+  res.sendStatus(200);
 });
 
 /***************************** LISTEN *****************************/

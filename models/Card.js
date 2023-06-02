@@ -11,6 +11,7 @@ const cardSchema = new mongoose.Schema({
     required: true,
     type: Number,
   },
+  labels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Label" }],
 });
 
 export default mongoose.model("Card", cardSchema);
