@@ -62,17 +62,35 @@ app.post("/card", jsonParser, async function (req, res) {
 });
 
 app.post("/label", jsonParser, async function (req, res) {
-  const { colour, cardId } = req.body;
+  const { colour, cardId, add } = req.body;
   const card = await Card.findById(cardId);
   const cardWithLabels = await card.populate("labels");
 
-  const labelExists = cardWithLabels.labels.some(
+  const labelExists = cardWithLabels.labels.find(
     (label) => label.colour === colour
   );
   if (labelExists) {
+    /* remove label */
+    if (!add) {
+      card.labels = card.labels.filter(
+        (labelId) => labelId !== labelExists._id
+      );
+      await card.save();
+      await Label.deleteOne({ _id: labelExists._id });
+      const cardToReturn = await card.populate("labels");
+      res.json(cardToReturn);
+      return;
+    }
+
     res.json(cardWithLabels);
     return;
   }
+
+  if (!labelExists && !add) {
+    res.json(cardWithLabels);
+    return;
+  }
+  /* Add label */
   const newLabel = new Label({
     colour: colour,
     cardId: cardId,
@@ -116,11 +134,11 @@ app.get("/label", async function (req, res) {
 app.patch("/card", jsonParser, async function (req, res) {
   const filter = { _id: req.body.id };
   const update = { status: req.body.status };
-
   const card = await Card.findOneAndUpdate(filter, update, {
     new: true,
   });
-  res.json(card);
+  const cardsToReturn = await card.populate("labels");
+  res.json(cardsToReturn.toJSON());
 });
 
 /***************************** All DELETE methods *****************************/
