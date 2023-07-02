@@ -8,7 +8,9 @@ import Card from "./models/Card.js";
 import Board from "./models/Board.js";
 import Label from "./models/Label.js";
 
-mongoose.connect(process.env.CONNECTION_STRING);
+mongoose.connect(
+  `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_URL}/userDB`
+);
 const app = express();
 app.use(cors());
 var jsonParser = bodyParser.json();
