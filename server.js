@@ -8,7 +8,7 @@ import Card from "./models/Card.js";
 import Board from "./models/Board.js";
 import Label from "./models/Label.js";
 
-mongoose.connect("mongodb://127.0.0.1:27017/userDB");
+mongoose.connect(process.env.CONNECTION_STRING);
 const app = express();
 app.use(cors());
 var jsonParser = bodyParser.json();
@@ -115,7 +115,7 @@ app.get("/register", async function (req, res) {
   res.json(all);
 });
 app.get("/board", async function (req, res) {
-  const filter = { userId: "645d1cd8039320f78d51f4a7" };
+  const filter = { userId: req.query.userId };
   const allBoards = await Board.find(filter);
   res.json(allBoards);
 });
@@ -139,6 +139,15 @@ app.patch("/card", jsonParser, async function (req, res) {
   });
   const cardsToReturn = await card.populate("labels");
   res.json(cardsToReturn.toJSON());
+});
+
+app.patch("/board", jsonParser, async function (req, res) {
+  const filter = { _id: req.body.id };
+  const update = { title: req.body.title };
+  const boardTitle = await Board.findOneAndUpdate(filter, update, {
+    new: true,
+  });
+  res.json(boardTitle.toJSON());
 });
 
 /***************************** All DELETE methods *****************************/
