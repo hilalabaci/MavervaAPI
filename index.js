@@ -23,9 +23,7 @@ app
   .route("/")
 
   .get(async function (req, res) {
-    const filter = {};
-    const all = await User.find(filter);
-    res.json(all);
+    res.json({ version: "1.2" });
   });
 
 /***************************** /register *****************************/
