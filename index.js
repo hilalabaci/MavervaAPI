@@ -114,7 +114,10 @@ app
 
   .get(async function (req, res) {
     const filter = { userId: req.query.userId };
-    const allBoards = await Board.find(filter);
+    const allUserBoards = await UserBoard.find(filter);
+    const boardIds = allUserBoards.map((ub) => ub.boardId);
+    const boadFilter = { _id: { $in: boardIds } };
+    const allBoards = await Board.find(boadFilter);
     res.json(allBoards);
   })
 
