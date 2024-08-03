@@ -8,6 +8,7 @@ import User from "./models/User.js";
 import Card from "./models/Card.js";
 import Board from "./models/Board.js";
 import Label from "./models/Label.js";
+import UserBoard from "./models/UserBoard.js";
 
 dotenv.config();
 
@@ -102,6 +103,12 @@ app
       userId: userId,
     });
     await newBoard.save();
+    const newUserBoard = new UserBoard({
+      boardId: newBoard._id,
+      userId: userId,
+    });
+    await newUserBoard.save();
+
     res.json(newBoard.toJSON());
   })
 
@@ -124,9 +131,46 @@ app
     const id = req.query.id;
     const filter = { boardId: id };
     await Card.deleteMany(filter);
+    await UserBoard.deleteMany(filter);
     await Board.deleteOne({ _id: id });
     res.sendStatus(200);
   });
+
+app.route("/board/add-user").post(jsonParser, async function (req, res) {
+  const { boardId, email } = req.body;
+  const userFilter = { email: email };
+  const userMatch = await User.findOne(userFilter);
+  if (userMatch === null) {
+    res.status(400).json({
+      message: "User not found",
+    });
+    return;
+  }
+  const boardFilter = { _id: boardId };
+  const boardMatch = await Board.findOne(boardFilter);
+  if (boardMatch === null) {
+    res.status(400).json({
+      message: "Board not found",
+    });
+    return;
+  }
+  const userBoardFilter = { userId: userMatch._id, boardId: boardId };
+  const hasUserBoard = await UserBoard.findOne(userBoardFilter);
+  if (hasUserBoard) {
+    res.status(400).json({
+      message: "User already exists in the board",
+    });
+    return;
+  }
+
+  const newUserBoard = new UserBoard({
+    boardId: boardId,
+    userId: userMatch._id,
+  });
+  await newUserBoard.save();
+
+  res.json(newUserBoard.toJSON());
+});
 
 /***************************** /card *****************************/
 app
