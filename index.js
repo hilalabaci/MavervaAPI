@@ -9,7 +9,7 @@ import Card from "./models/Card.js";
 import Board from "./models/Board.js";
 import Label from "./models/Label.js";
 import UserBoard from "./models/UserBoard.js";
-import Notification from "./models/notification.js";
+import Notification from "./models/Notification.js";
 
 dotenv.config();
 
