@@ -9,6 +9,7 @@ import Card from "./models/Card.js";
 import Board from "./models/Board.js";
 import Label from "./models/Label.js";
 import UserBoard from "./models/UserBoard.js";
+import Notification from "./models/notification.js";
 
 dotenv.config();
 
@@ -114,8 +115,11 @@ app
 
   .get(async function (req, res) {
     const filter = { userId: req.query.userId };
+    console.log("filter", JSON.stringify(filter));
     const allUserBoards = await UserBoard.find(filter);
+    console.log("allUserBoards", JSON.stringify(allUserBoards));
     const boardIds = allUserBoards.map((ub) => ub.boardId);
+    console.log("boardIds", boardIds);
     const boadFilter = { _id: { $in: boardIds } };
     const allBoards = await Board.find(boadFilter);
     res.json(allBoards);
@@ -140,7 +144,7 @@ app
   });
 
 app.route("/board/add-user").post(jsonParser, async function (req, res) {
-  const { boardId, email } = req.body;
+  const { boardId, email, userId } = req.body;
   const userFilter = { email: email };
   const userMatch = await User.findOne(userFilter);
   if (userMatch === null) {
@@ -171,6 +175,16 @@ app.route("/board/add-user").post(jsonParser, async function (req, res) {
     userId: userMatch._id,
   });
   await newUserBoard.save();
+  /***************************** notification/post *****************************/
+
+  const newNotification = new Notification({
+    fromUserId: userId,
+    toUserId: userMatch._id,
+    boardId: boardId,
+    message: `Added you to the board ${boardMatch.title}`,
+  });
+
+  await newNotification.save();
 
   res.json(newUserBoard.toJSON());
 });
@@ -270,6 +284,15 @@ app
     res.sendStatus(200);
   });
 
+/***************************** NOTIFICATIONS *****************************/
+app.route("/notification").get(async function (req, res) {
+  const filter = { toUserId: req.query.userId };
+  const all = await Notification.find(filter).populate({
+    path: "fromUserId",
+    select: "-password", // Exclude the password field
+  });
+  res.json(all);
+});
 /***************************** LISTEN *****************************/
 
 app.listen(3001, function () {
