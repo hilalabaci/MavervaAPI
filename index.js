@@ -293,6 +293,21 @@ app.route("/notification").get(async function (req, res) {
   });
   res.json(all);
 });
+
+app.route("/notification/mark-read").post(jsonParser, async function (req, res) {
+  const notificationIds = req.body.notificationIds;
+  if (!notificationIds?.length) {
+    res.status(400).json({
+      message: "invalid request",
+    });
+    return;
+  }
+  const filter = { _id: { $in: notificationIds } };
+
+  const update = { isRead: true };
+  await Notification.updateMany(filter, update);
+  return res.sendStatus(200);
+});
 /***************************** LISTEN *****************************/
 
 app.listen(3001, function () {
