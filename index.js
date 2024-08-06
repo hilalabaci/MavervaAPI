@@ -180,8 +180,7 @@ app.route("/board/add-user").post(jsonParser, async function (req, res) {
   const newNotification = new Notification({
     fromUserId: userId,
     toUserId: userMatch._id,
-    boardId: boardId,
-    message: `Added you to the board ${boardMatch.title}`,
+    message: `Added you to the board __${boardMatch.title}__`,
   });
 
   await newNotification.save();
@@ -291,23 +290,26 @@ app.route("/notification").get(async function (req, res) {
     path: "fromUserId",
     select: "-password", // Exclude the password field
   });
+
   res.json(all);
 });
 
-app.route("/notification/mark-read").post(jsonParser, async function (req, res) {
-  const notificationIds = req.body.notificationIds;
-  if (!notificationIds?.length) {
-    res.status(400).json({
-      message: "invalid request",
-    });
-    return;
-  }
-  const filter = { _id: { $in: notificationIds } };
+app
+  .route("/notification/mark-read")
+  .post(jsonParser, async function (req, res) {
+    const notificationIds = req.body.notificationIds;
+    if (!notificationIds?.length) {
+      res.status(400).json({
+        message: "invalid request",
+      });
+      return;
+    }
+    const filter = { _id: { $in: notificationIds } };
 
-  const update = { isRead: true };
-  await Notification.updateMany(filter, update);
-  return res.sendStatus(200);
-});
+    const update = { isRead: true };
+    await Notification.updateMany(filter, update);
+    return res.sendStatus(200);
+  });
 /***************************** LISTEN *****************************/
 
 app.listen(3001, function () {

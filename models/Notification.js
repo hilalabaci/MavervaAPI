@@ -10,11 +10,6 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  boardId: {
-    required: true,
-    type: String,
-  },
-
   createdAdd: {
     required: true,
     type: Date,
@@ -33,7 +28,6 @@ const notificationSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  toUser: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 });
 
 export default mongoose.model("Notification", notificationSchema);
