@@ -180,7 +180,7 @@ app.route("/board/add-user").post(jsonParser, async function (req, res) {
   const newNotification = new Notification({
     fromUserId: userId,
     toUserId: userMatch._id,
-    message: `Added you to the board __${boardMatch.title}__`,
+    message: `Added you to the board ${boardMatch.title}`,
   });
 
   await newNotification.save();
