@@ -193,8 +193,9 @@ app
   .route("/card")
 
   .post(jsonParser, async function (req, res) {
-    const { content, boardId, status } = req.body;
+    const { content, boardId, status, userId } = req.body;
     const newCard = new Card({
+      userId: userId,
       content: content,
       boardId: boardId,
       status: status,
@@ -204,7 +205,7 @@ app
   })
   .get(async function (req, res) {
     const filter = { boardId: req.query.boardId };
-    const all = await Card.find(filter).populate("labels");
+    const all = await Card.find(filter).populate("labels").populate("userId");;
     res.json(all);
   })
 
@@ -223,6 +224,7 @@ app
     await Card.deleteOne({ _id: id });
     await Label.deleteMany({ cardId: id });
     res.sendStatus(200);
+    ç;
   });
 
 /***************************** /label *****************************/
