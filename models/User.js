@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import validator from "validator";
-import { nanoid } from "nanoid";
 
 const userSchema = new mongoose.Schema({
   fullName: String,
@@ -17,12 +16,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, "Password must be at least 8 characters long"],
     maxlength: [128, "Password must be less than 128 characters long"],
   },
-  userId: {
-    type: String,
-    required: true,
-    default: () => nanoid(7),
-    index: { unique: true },
-  },
+  boards: [{ type: mongoose.Schema.Types.ObjectId, ref: "Board" }],
 });
 
 export default mongoose.model("User", userSchema);

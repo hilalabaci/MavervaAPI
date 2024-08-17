@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const labelSchema = new mongoose.Schema({
   colour: String,
   cardId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Card",
     required: true,
   },
 });

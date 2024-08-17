@@ -2,13 +2,12 @@
 import mongoose from "mongoose";
 import bodyParser from "body-parser";
 import cors from "cors";
-import dotenv from "dotenv";
+import dotenv, { populate } from "dotenv";
 import express from "express";
 import User from "./models/User.js";
 import Card from "./models/Card.js";
 import Board from "./models/Board.js";
 import Label from "./models/Label.js";
-import UserBoard from "./models/UserBoard.js";
 import Notification from "./models/Notification.js";
 
 dotenv.config();
@@ -67,7 +66,7 @@ app
       email: email,
       password: password,
     });
-    user.save();
+    await user.save();
     res.json(user.toJSON());
   })
 
@@ -99,30 +98,32 @@ app
 
   .post(jsonParser, async function (req, res) {
     const { title, userId } = req.body;
+
     const newBoard = new Board({
       title: title,
-      userId: userId,
+      users: [userId], // Yeni panoya kullanıcı ekleniyor
     });
-    await newBoard.save();
-    const newUserBoard = new UserBoard({
-      boardId: newBoard._id,
-      userId: userId,
-    });
-    await newUserBoard.save();
 
-    res.json(newBoard.toJSON());
+    await newBoard.save();
+
+    // Kullanıcının boards dizisine panoyu ekleyin
+    const user = await User.findById(userId).populate("user");
+    user.boards.push(newBoard._id);
+    await user.save();
+
+    res.json(newBoard);
   })
 
   .get(async function (req, res) {
-    const filter = { userId: req.query.userId };
-    console.log("filter", JSON.stringify(filter));
-    const allUserBoards = await UserBoard.find(filter);
-    console.log("allUserBoards", JSON.stringify(allUserBoards));
-    const boardIds = allUserBoards.map((ub) => ub.boardId);
-    console.log("boardIds", boardIds);
-    const boadFilter = { _id: { $in: boardIds } };
-    const allBoards = await Board.find(boadFilter);
-    res.json(allBoards);
+    const userId = req.query.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    const boards = await Board.find({ users: userId }).populate({
+      path: "users",
+      select: "-password", // Exclude the password field
+    });
+    res.json(boards);
   })
 
   .patch(jsonParser, async function (req, res) {
@@ -145,36 +146,29 @@ app
 
 app.route("/board/add-user").post(jsonParser, async function (req, res) {
   const { boardId, email, userId } = req.body;
-  const userFilter = { email: email };
-  const userMatch = await User.findOne(userFilter);
+  const userMatch = await User.findOne({ email: email });
   if (userMatch === null) {
     res.status(400).json({
       message: "User not found",
     });
-    return;
   }
-  const boardFilter = { _id: boardId };
-  const boardMatch = await Board.findOne(boardFilter);
-  if (boardMatch === null) {
+  const boardMatch = await Board.findOne({ _id: boardId });
+  if (!boardMatch) {
     res.status(400).json({
       message: "Board not found",
     });
-    return;
   }
-  const userBoardFilter = { userId: userMatch._id, boardId: boardId };
-  const hasUserBoard = await UserBoard.findOne(userBoardFilter);
-  if (hasUserBoard) {
-    res.status(400).json({
-      message: "User already exists in the board",
-    });
-    return;
+  // Check if the user is already associated with the board
+  if (boardMatch.users.includes(userMatch._id)) {
+    return res
+      .status(400)
+      .json({ message: "User already exists in the board" });
   }
 
-  const newUserBoard = new UserBoard({
-    boardId: boardId,
-    userId: userMatch._id,
-  });
-  await newUserBoard.save();
+  // Add the user to the board's users array
+  boardMatch.users.push(userMatch._id);
+  await boardMatch.save();
+
   /***************************** notification/post *****************************/
 
   const newNotification = new Notification({
@@ -185,7 +179,7 @@ app.route("/board/add-user").post(jsonParser, async function (req, res) {
 
   await newNotification.save();
 
-  res.json(newUserBoard.toJSON());
+  res.json(boardMatch.toJSON());
 });
 
 /***************************** /card *****************************/
@@ -201,11 +195,14 @@ app
       status: status,
     });
     await newCard.save();
-    res.json(newCard.toJSON());
+
+    let cardToReturn = await newCard.populate("userId");
+    cardToReturn = await cardToReturn.populate("labels");
+    res.json(cardToReturn.toJSON());
   })
   .get(async function (req, res) {
     const filter = { boardId: req.query.boardId };
-    const all = await Card.find(filter).populate("labels").populate("userId");;
+    const all = await Card.find(filter).populate("labels").populate("userId");
     res.json(all);
   })
 
@@ -214,9 +211,8 @@ app
     const update = { status: req.body.status };
     const card = await Card.findOneAndUpdate(filter, update, {
       new: true,
-    });
-    const cardsToReturn = await card.populate("labels");
-    res.json(cardsToReturn.toJSON());
+    }).populate("labels").populate("userId");
+    res.json(card.toJSON());
   })
 
   .delete(async function (req, res) {
@@ -224,7 +220,6 @@ app
     await Card.deleteOne({ _id: id });
     await Label.deleteMany({ cardId: id });
     res.sendStatus(200);
-    ç;
   });
 
 /***************************** /label *****************************/
@@ -233,10 +228,11 @@ app
 
   .post(jsonParser, async function (req, res) {
     const { colour, cardId, add } = req.body;
-    const card = await Card.findById(cardId);
-    const cardWithLabels = await card.populate("labels");
+    const card = await Card.findById(cardId)
+      .populate("labels")
+      .populate("userId");
 
-    const labelExists = cardWithLabels.labels.find(
+    const labelExists = card.labels.find(
       (label) => label.colour === colour
     );
     if (labelExists) {
@@ -252,12 +248,12 @@ app
         return;
       }
 
-      res.json(cardWithLabels);
+      res.json(card);
       return;
     }
 
     if (!labelExists && !add) {
-      res.json(cardWithLabels);
+      res.json(card);
       return;
     }
     /* Add label */
@@ -269,7 +265,8 @@ app
 
     card.labels.push(newLabel._id);
     await card.save();
-    const cardsToReturn = await card.populate("labels");
+    let cardsToReturn = await card.populate("labels");
+    cardsToReturn = await cardsToReturn.populate("userId");
     res.json(cardsToReturn.toJSON());
   })
 

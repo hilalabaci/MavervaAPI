@@ -6,10 +6,12 @@ const boardSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  userId: {
-    type: String,
-    required: true,
-  },
+  users: [
+    {
+      ref: "User",
+      type: mongoose.Schema.Types.ObjectId,
+    },
+  ],
 });
 
 export default mongoose.model("Board", boardSchema);

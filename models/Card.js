@@ -5,12 +5,12 @@ const cardSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    type: String,
     required: true,
   },
   content: String,
   boardId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Board",
     required: true,
   },
   status: {
