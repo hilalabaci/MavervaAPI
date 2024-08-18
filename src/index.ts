@@ -2,18 +2,18 @@
 import mongoose from "mongoose";
 import bodyParser from "body-parser";
 import cors from "cors";
-import dotenv, { populate } from "dotenv";
+import dotenv from "dotenv";
 import express from "express";
-import User from "./models/User.js";
-import Card from "./models/Card.js";
-import Board from "./models/Board.js";
-import Label from "./models/Label.js";
-import Notification from "./models/Notification.js";
+import User from "./models/User";
+import Card from "./models/Card";
+import Board from "./models/Board";
+import Label, { LabelType } from "./models/Label";
+import Notification from "./models/Notification";
 
 dotenv.config();
 
 mongoose.connect(
-  `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_URL}/userDB`
+  `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_URL}/userDB`,
 );
 const app = express();
 app.use(cors());
@@ -107,9 +107,9 @@ app
     await newBoard.save();
 
     // Kullanıcının boards dizisine panoyu ekleyin
-    const user = await User.findById(userId).populate("user");
-    user.boards.push(newBoard._id);
-    await user.save();
+    const user = await User.findById(userId);
+    user?.boards.push(newBoard._id);
+    await user?.save();
 
     res.json(newBoard);
   })
@@ -132,14 +132,13 @@ app
     const boardTitle = await Board.findOneAndUpdate(filter, update, {
       new: true,
     });
-    res.json(boardTitle.toJSON());
+    res.json(boardTitle?.toJSON());
   })
 
   .delete(async function (req, res) {
     const id = req.query.id;
     const filter = { boardId: id };
     await Card.deleteMany(filter);
-    await UserBoard.deleteMany(filter);
     await Board.deleteOne({ _id: id });
     res.sendStatus(200);
   });
@@ -151,12 +150,14 @@ app.route("/board/add-user").post(jsonParser, async function (req, res) {
     res.status(400).json({
       message: "User not found",
     });
+    return;
   }
   const boardMatch = await Board.findOne({ _id: boardId });
   if (!boardMatch) {
     res.status(400).json({
       message: "Board not found",
     });
+    return;
   }
   // Check if the user is already associated with the board
   if (boardMatch.users.includes(userMatch._id)) {
@@ -211,8 +212,10 @@ app
     const update = { status: req.body.status };
     const card = await Card.findOneAndUpdate(filter, update, {
       new: true,
-    }).populate("labels").populate("userId");
-    res.json(card.toJSON());
+    })
+      .populate("labels")
+      .populate("userId");
+    res.json(card?.toJSON());
   })
 
   .delete(async function (req, res) {
@@ -232,14 +235,21 @@ app
       .populate("labels")
       .populate("userId");
 
-    const labelExists = card.labels.find(
-      (label) => label.colour === colour
+    if (!card) {
+      res.status(400).json({
+        message: "Card not found",
+      });
+      return;
+    }
+
+    const labelExists = (card.labels as LabelType[])?.find(
+      (label) => label.colour === colour,
     );
     if (labelExists) {
       /* remove label */
       if (!add) {
-        card.labels = card.labels.filter(
-          (labelId) => labelId !== labelExists._id
+        card.labels = (card.labels as LabelType[]).filter(
+          (label) => label._id !== labelExists._id,
         );
         await card.save();
         await Label.deleteOne({ _id: labelExists._id });
@@ -263,7 +273,7 @@ app
     });
     await newLabel.save();
 
-    card.labels.push(newLabel._id);
+    (card.labels as mongoose.Types.ObjectId[]).push(newLabel._id);
     await card.save();
     let cardsToReturn = await card.populate("labels");
     cardsToReturn = await cardsToReturn.populate("userId");
