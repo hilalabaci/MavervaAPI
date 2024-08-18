@@ -2,25 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "./index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["./**/*.ts"]
-      }
+      "src": "index.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "/index.ts"
     }
-  ],
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    },
-    "commands": {
-      "build": "npm run build"
-    }
-  }
+  ]
 }
