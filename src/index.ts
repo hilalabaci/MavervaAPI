@@ -135,24 +135,24 @@ app
       users: [userId], // Yeni panoya kullanıcı ekleniyor
       projectKey: uniqueKey,
     });
-    try {
-      await newBoard.save();
-      res
-        .status(201)
-        .json({ message: "Board created successfully", projectKey: uniqueKey });
-    } catch (err) {
-      res.status(500).json({
-        message: "Error creating board",
-        error: (err as Error).message,
-      });
-    }
 
     // Kullanıcının boards dizisine panoyu ekleyin
     const user = await User.findById(userId);
     user?.boards.push(newBoard._id);
     await user?.save();
 
-    res.json(newBoard);
+    try {
+      await newBoard.save();
+      res.status(201).json({
+        message: "Board created successfully",
+        newBoard,
+      });
+    } catch (err) {
+      res.status(500).json({
+        message: "Error creating board",
+        error: (err as Error).message,
+      });
+    }
   })
 
   .get(async function (req, res) {
