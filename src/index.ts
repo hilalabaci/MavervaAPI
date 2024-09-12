@@ -101,8 +101,6 @@ wss.on("connection", (ws) => {
   // Mesaj dinleme
   ws.on("message", async (message: string) => {
     const data = JSON.parse(message);
-    console.log("Received: %s", message);
-    //dsdfmlkglsd key
     let projectKey = "";
     const chars = data.title.split(" ") ?? ["Undefined"];
     if (chars.length === 1) {
@@ -142,66 +140,65 @@ wss.on("connection", (ws) => {
   const sendProjectKeyToClient = (key: string) => {
     ws.send(JSON.stringify({ message: "Unique Key Created", projectKey: key }));
   };
-  app
-    .route("/board")
-
-    .post(jsonParser, async function (req, res) {
-      const { title, userId, uniqueKey } = req.body;
-      const newBoard = new Board({
-        title: title,
-        users: [userId], // Yeni panoya kullanıcı ekleniyor
-        projectKey: uniqueKey,
-      });
-
-      // Kullanıcının boards dizisine panoyu ekleyin
-      const user = await User.findById(userId);
-      user?.boards.push(newBoard._id);
-      await user?.save();
-
-      try {
-        await newBoard.save();
-        res.status(201).json({
-          message: "Board created successfully",
-          newBoard,
-        });
-      } catch (err) {
-        res.status(500).json({
-          message: "Error creating board",
-          error: (err as Error).message,
-        });
-      }
-    })
-
-    .get(async function (req, res) {
-      const userId = req.query.userId;
-      if (!userId) {
-        return res.status(400).json({ message: "User ID is required" });
-      }
-      const boards = await Board.find({ users: userId }).populate({
-        path: "users",
-        select: "-password", // Exclude the password field
-      });
-      res.json(boards);
-    })
-
-    .patch(jsonParser, async function (req, res) {
-      const filter = { _id: req.body.id };
-      const update = { title: req.body.title };
-      const boardTitle = await Board.findOneAndUpdate(filter, update, {
-        new: true,
-      });
-      res.json(boardTitle?.toJSON());
-    })
-
-    .delete(async function (req, res) {
-      const id = req.query.id;
-      const filter = { boardId: id };
-      await Card.deleteMany(filter);
-      await Board.deleteOne({ _id: id });
-      res.sendStatus(200);
-    });
 });
+app
+  .route("/board")
 
+  .post(jsonParser, async function (req, res) {
+    const { title, userId, projectKey } = req.body;
+    const newBoard = new Board({
+      title: title,
+      users: [userId], // Yeni panoya kullanıcı ekleniyor
+      projectKey: projectKey,
+    });
+
+    // Kullanıcının boards dizisine panoyu ekleyin
+    const user = await User.findById(userId);
+    user?.boards.push(newBoard._id);
+    await user?.save();
+
+    try {
+      await newBoard.save();
+      res.status(201).json({
+        message: "Board created successfully",
+        newBoard,
+      });
+    } catch (err) {
+      res.status(500).json({
+        message: "Error creating board",
+        error: (err as Error).message,
+      });
+    }
+  })
+
+  .get(async function (req, res) {
+    const userId = req.query.userId;
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    const boards = await Board.find({ users: userId }).populate({
+      path: "users",
+      select: "-password", // Exclude the password field
+    });
+    res.json(boards);
+  })
+
+  .patch(jsonParser, async function (req, res) {
+    const filter = { _id: req.body.id };
+    const update = { title: req.body.title };
+    const boardTitle = await Board.findOneAndUpdate(filter, update, {
+      new: true,
+    });
+    res.json(boardTitle?.toJSON());
+  })
+
+  .delete(async function (req, res) {
+    const id = req.query.id;
+    const filter = { boardId: id };
+    await Card.deleteMany(filter);
+    await Board.deleteOne({ _id: id });
+    res.sendStatus(200);
+  });
 app.route("/board/add-user").post(jsonParser, async function (req, res) {
   const { boardId, email, userId } = req.body;
   const userMatch = await User.findOne({ email: email });
