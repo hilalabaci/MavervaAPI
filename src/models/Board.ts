@@ -6,6 +6,10 @@ const boardSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  projectKey: {
+    type: String,
+    require: true,
+  },
   users: [
     {
       ref: "User",

@@ -97,11 +97,12 @@ app
   .route("/board")
 
   .post(jsonParser, async function (req, res) {
-    const { title, userId } = req.body;
+    const { title, userId, projectKey } = req.body;
 
     const newBoard = new Board({
       title: title,
       users: [userId], // Yeni panoya kullanıcı ekleniyor
+      projectKey: projectKey,
     });
 
     await newBoard.save();
