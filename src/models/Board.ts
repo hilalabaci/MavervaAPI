@@ -8,7 +8,7 @@ const boardSchema = new mongoose.Schema({
   },
   projectKey: {
     type: String,
-    require: true,
+    required: true,
   },
   users: [
     {
