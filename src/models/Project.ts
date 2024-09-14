@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 /* import User from "./models/user.js"; */
 
-const boardSchema = new mongoose.Schema({
+const projectSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
@@ -18,4 +18,4 @@ const boardSchema = new mongoose.Schema({
   ],
 });
 
-export default mongoose.model("Board", boardSchema);
+export default mongoose.model("Project", projectSchema);

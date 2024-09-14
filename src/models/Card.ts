@@ -17,9 +17,9 @@ const cardSchema = new mongoose.Schema({
     required: true,
   },
   content: String,
-  boardId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Board",
+  projectKey: {
+    type: mongoose.Schema.Types.String,
+    ref: "Project",
     required: true,
   },
   status: {

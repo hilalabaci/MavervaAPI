@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import express from "express";
 import User from "./models/User";
 import Card from "./models/Card";
-import Board from "./models/Board";
+import Project from "./models/Project";
 import Label, { LabelType } from "./models/Label";
 import Notification from "./models/Notification";
 import { WebSocketServer } from "ws";
@@ -93,7 +93,7 @@ app
     res.json(user);
   });
 
-/***************************** /board *****************************/
+/***************************** /project *****************************/
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
@@ -123,8 +123,8 @@ wss.on("connection", (ws) => {
     let uniqueKey = projectKey;
     let suffix = 1;
     while (!isKeyUnique) {
-      const existingBoard = await Board.findOne({ projectKey: uniqueKey });
-      if (!existingBoard) {
+      const existingProject = await Project.findOne({ projectKey: uniqueKey });
+      if (!existingProject) {
         isKeyUnique = true;
       } else {
         // Eğer aynı key varsa, sonuna bir sayı ekleyerek benzersiz yap
@@ -132,40 +132,40 @@ wss.on("connection", (ws) => {
         suffix++;
       }
     }
-    ws.send(JSON.stringify({ boardKey: uniqueKey }));
+    ws.send(JSON.stringify({ projectKey: uniqueKey }));
     sendProjectKeyToClient(uniqueKey);
   });
 
-  // Board oluşturulduğunda mesaj gönder
+  // Project oluşturulduğunda mesaj gönder
   const sendProjectKeyToClient = (key: string) => {
     ws.send(JSON.stringify({ message: "Unique Key Created", projectKey: key }));
   };
 });
 app
-  .route("/board")
+  .route("/project")
 
   .post(jsonParser, async function (req, res) {
     const { title, userId, projectKey } = req.body;
-    const newBoard = new Board({
+    const newProject = new Project({
       title: title,
       users: [userId], // Yeni panoya kullanıcı ekleniyor
       projectKey: projectKey,
     });
 
-    // Kullanıcının boards dizisine panoyu ekleyin
+    // Kullanıcının projeject dizisine panoyu ekleyin
     const user = await User.findById(userId);
-    user?.boards.push(newBoard._id);
+    user?.projects.push(newProject._id);
     await user?.save();
 
     try {
-      await newBoard.save();
+      await newProject.save();
       res.status(201).json({
-        message: "Board created successfully",
-        newBoard,
+        message: "Project created successfully",
+        newProject,
       });
     } catch (err) {
       res.status(500).json({
-        message: "Error creating board",
+        message: "Error creating project",
         error: (err as Error).message,
       });
     }
@@ -176,31 +176,32 @@ app
     if (!userId) {
       return res.status(400).json({ message: "User ID is required" });
     }
-    const boards = await Board.find({ users: userId }).populate({
+    const projects = await Project.find({ users: userId }).populate({
       path: "users",
       select: "-password", // Exclude the password field
     });
-    res.json(boards);
+    res.json(projects);
   })
 
   .patch(jsonParser, async function (req, res) {
     const filter = { _id: req.body.id };
     const update = { title: req.body.title };
-    const boardTitle = await Board.findOneAndUpdate(filter, update, {
+    const projectTitle = await Project.findOneAndUpdate(filter, update, {
       new: true,
     });
-    res.json(boardTitle?.toJSON());
+    res.json(projectTitle?.toJSON());
   })
 
   .delete(async function (req, res) {
     const id = req.query.id;
-    const filter = { boardId: id };
+    const filter = { projectId: id };
     await Card.deleteMany(filter);
-    await Board.deleteOne({ _id: id });
+    await Project.deleteOne({ _id: id });
     res.sendStatus(200);
   });
-app.route("/board/add-user").post(jsonParser, async function (req, res) {
-  const { boardId, email, userId } = req.body;
+
+app.route("/project/add-user").post(jsonParser, async function (req, res) {
+  const { projectId, email, userId } = req.body;
   const userMatch = await User.findOne({ email: email });
   if (userMatch === null) {
     res.status(400).json({
@@ -208,47 +209,72 @@ app.route("/board/add-user").post(jsonParser, async function (req, res) {
     });
     return;
   }
-  const boardMatch = await Board.findOne({ _id: boardId });
-  if (!boardMatch) {
+  const projectMatch = await Project.findOne({ _id: projectId });
+  if (!projectMatch) {
     res.status(400).json({
-      message: "Board not found",
+      message: "Project not found",
     });
     return;
   }
-  // Check if the user is already associated with the board
-  if (boardMatch.users.includes(userMatch._id)) {
+  // Check if the user is already associated with the project
+  if (projectMatch.users.includes(userMatch._id)) {
     return res
       .status(400)
-      .json({ message: "User already exists in the board" });
+      .json({ message: "User already exists in the project" });
   }
 
-  // Add the user to the board's users array
-  boardMatch.users.push(userMatch._id);
-  await boardMatch.save();
+  // Add the user to the project's users array
+  projectMatch.users.push(userMatch._id);
+  await projectMatch.save();
 
   /***************************** notification/post *****************************/
 
   const newNotification = new Notification({
     fromUserId: userId,
     toUserId: userMatch._id,
-    message: `Added you to the board ${boardMatch.title}`,
+    message: `Added you to the project ${projectMatch.title}`,
   });
 
   await newNotification.save();
 
-  res.json(boardMatch.toJSON());
+  res.json(projectMatch.toJSON());
 });
 
+/***************************** /projects/:projectKey *****************************/
+
+app
+  .route("/projects/:projectKey")
+
+  .get(async function (req, res) {
+    const { projectKey } = req.params;
+    try {
+      const project = await Project.findOne({ projectKey }).populate({
+        path: "users",
+        select: "-password", // Parola alanını dışla
+      });
+
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      res.json(project);
+    } catch (error) {
+      res.status(500).json({
+        message: "Error fetching project",
+        error: (error as Error).message,
+      });
+    }
+  });
 /***************************** /card *****************************/
 app
   .route("/card")
 
   .post(jsonParser, async function (req, res) {
-    const { content, boardId, status, userId } = req.body;
+    const { content, projectKey, status, userId } = req.body;
     const newCard = new Card({
       userId: userId,
       content: content,
-      boardId: boardId,
+      projectKey: projectKey,
       status: status,
     });
     await newCard.save();
@@ -258,7 +284,7 @@ app
     res.json(cardToReturn.toJSON());
   })
   .get(async function (req, res) {
-    const filter = { boardId: req.query.boardId };
+    const filter = { projectKey: req.query.projectKey };
     const all = await Card.find(filter).populate("labels").populate("userId");
     res.json(all);
   })

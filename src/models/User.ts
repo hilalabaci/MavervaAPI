@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, "Password must be at least 8 characters long"],
     maxlength: [128, "Password must be less than 128 characters long"],
   },
-  boards: [{ type: mongoose.Schema.Types.ObjectId, ref: "Board" }],
+  projects: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
 });
 
 export default mongoose.model("User", userSchema);
