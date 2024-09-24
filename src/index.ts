@@ -10,6 +10,7 @@ import Project from "./models/Project";
 import Label, { LabelType } from "./models/Label";
 import Notification from "./models/Notification";
 import { WebSocketServer } from "ws";
+import Board from "./models/Board";
 dotenv.config();
 
 mongoose.connect(
@@ -265,17 +266,61 @@ app
       });
     }
   });
+
+/***************************** /board ******************/
+app
+
+  .route("/board")
+  .post(jsonParser, async function (req, res) {
+    const { title, userId, projectIds } = req.body;
+    const newBoard = new Board({
+      title: title,
+      users: [userId], // Yeni panoya kullanıcı ekleniyor
+      projectIds: projectIds,
+    });
+
+    const user = await User.findById(userId);
+    user?.boards.push(newBoard._id);
+    await user?.save();
+
+    try {
+      await newBoard.save();
+      res.status(201).json({
+        message: "Board created successfully",
+        newBoard,
+      });
+    } catch (err) {
+      res.status(500).json({
+        message: "Error creating board",
+        error: (err as Error).message,
+      });
+    }
+  })
+  .get(async function (req, res) {
+    const userId = req.query.userId;
+    //    const projectKey = req.query.projectKey;
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    const boards = await Board.find({ users: userId }).populate({
+      path: "users",
+      select: "-password", // Exclude the password field
+    });
+    res.json(boards);
+  });
+
 /***************************** /card *****************************/
 app
   .route("/card")
 
   .post(jsonParser, async function (req, res) {
-    const { content, projectKey, status, userId } = req.body;
+    const { content, projectKey, status, userId, boardId } = req.body;
     const newCard = new Card({
       userId: userId,
       content: content,
       projectKey: projectKey,
       status: status,
+      boardId: boardId,
     });
     await newCard.save();
 
@@ -284,7 +329,7 @@ app
     res.json(cardToReturn.toJSON());
   })
   .get(async function (req, res) {
-    const filter = { projectKey: req.query.projectKey };
+    const filter = { boardId: req.query.boardId };
     const all = await Card.find(filter).populate("labels").populate("userId");
     res.json(all);
   })

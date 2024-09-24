@@ -22,6 +22,11 @@ const cardSchema = new mongoose.Schema({
     ref: "Project",
     required: true,
   },
+  BoardId: {
+    type: mongoose.Schema.Types.String,
+    ref: "Board",
+    required: true,
+  },
   status: {
     required: true,
     type: Number,
