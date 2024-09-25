@@ -146,23 +146,38 @@ app
   .route("/project")
 
   .post(jsonParser, async function (req, res) {
-    const { title, userId, projectKey } = req.body;
-    const newProject = new Project({
-      title: title,
-      users: [userId], // Yeni panoya kullanıcı ekleniyor
-      projectKey: projectKey,
-    });
-
-    // Kullanıcının projeject dizisine panoyu ekleyin
-    const user = await User.findById(userId);
-    user?.projects.push(newProject._id);
-    await user?.save();
+    const { title, userId, projectKey, boardName } = req.body;
 
     try {
+      const newProject = new Project({
+        title: title,
+        users: [userId], // Yeni panoya kullanıcı ekleniyor
+        projectKey: projectKey,
+        boards: [],
+      });
+
       await newProject.save();
+
+      const board = new Board({
+        title: boardName ?? `${projectKey} board`,
+        users: [userId], // Yeni panoya kullanıcı ekleniyor
+        projectIds: [newProject._id],
+      });
+
+      await board.save();
+
+      newProject.boards = [board._id];
+      await newProject.save();
+
+      // Kullanıcının projeject dizisine panoyu ekleyin
+      const user = await User.findById(userId);
+      user?.projects.push(newProject._id);
+      await user?.save();
+
+      const projectToReturn = await newProject.populate("boards");
       res.status(201).json({
         message: "Project created successfully",
-        newProject,
+        project: projectToReturn,
       });
     } catch (err) {
       res.status(500).json({
@@ -177,10 +192,12 @@ app
     if (!userId) {
       return res.status(400).json({ message: "User ID is required" });
     }
-    const projects = await Project.find({ users: userId }).populate({
-      path: "users",
-      select: "-password", // Exclude the password field
-    });
+    const projects = await Project.find({ users: userId })
+      .populate({
+        path: "users",
+        select: "-password", // Exclude the password field
+      })
+      .populate("boards");
     res.json(projects);
   })
 
@@ -272,19 +289,18 @@ app
 
   .route("/board")
   .post(jsonParser, async function (req, res) {
-    const { title, userId, projectIds } = req.body;
-    const newBoard = new Board({
-      title: title,
-      users: [userId], // Yeni panoya kullanıcı ekleniyor
-      projectIds: projectIds,
-    });
-
-    const user = await User.findById(userId);
-    user?.boards.push(newBoard._id);
-    await user?.save();
-
     try {
+      const { title, userId, projectKey } = req.body;
+      const newBoard = new Board({
+        title: title,
+        users: [userId], // Yeni panoya kullanıcı ekleniyor
+        projectKey: projectKey,
+      });
       await newBoard.save();
+      const user = await User.findById(userId);
+      user?.boards.push(newBoard._id);
+      await user?.save();
+
       res.status(201).json({
         message: "Board created successfully",
         newBoard,
@@ -297,18 +313,67 @@ app
     }
   })
   .get(async function (req, res) {
+    const projectKey = req.query.projectKey;
     const userId = req.query.userId;
     //    const projectKey = req.query.projectKey;
-    if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+    if (!projectKey && !userId) {
+      return res
+        .status(400)
+        .json({ message: "User ID and Project Key is required" });
     }
-    const boards = await Board.find({ users: userId }).populate({
+
+    const project = await Project.findOne({
+      projectKey: projectKey,
+      users: userId,
+    });
+
+    if (!project) {
+      return res.status(400).json({ message: "Project not found" });
+    }
+
+    const boards = await Board.find({
+      users: userId,
+      projectIds: project._id,
+    }).populate({
       path: "users",
-      select: "-password", // Exclude the password field
+      select: "-password", // Exclude the password fieldƒ
     });
     res.json(boards);
   });
 
+/***************************** /board/: *****************************/
+
+app
+  .route("/projects/:projectKey/boards/:boardId")
+
+  .get(async function (req, res) {
+    const { boardId, projectKey } = req.params;
+    try {
+      const project = await Project.findOne({
+        projectKey: projectKey,
+      });
+
+      if (!project) {
+        return res.status(400).json({ message: "Project not found" });
+      }
+      const filter = { _id: boardId, projectIds: project._id };
+      const selectedBoard = await Board.findOne(filter).populate({
+        path: "users",
+        select: "-password", // Parola alanını dışla
+      });
+
+      if (!selectedBoard) {
+        return res.status(404).json({ message: "Board not found" });
+      }
+
+      res.json(selectedBoard);
+    } catch (error) {
+      res.status(500).json({
+        message: "Error fetching board",
+        error: (error as Error).message,
+      });
+    }
+  });
 /***************************** /card *****************************/
 app
   .route("/card")

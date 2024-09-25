@@ -16,8 +16,12 @@ const projectSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
     },
   ],
-  
-  
+  boards: [
+    {
+      ref: "Board",
+      type: mongoose.Schema.Types.ObjectId,
+    },
+  ],
 });
 
 export default mongoose.model("Project", projectSchema);
