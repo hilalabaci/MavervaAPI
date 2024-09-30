@@ -22,8 +22,8 @@ const cardSchema = new mongoose.Schema({
     ref: "Project",
     required: true,
   },
-  BoardId: {
-    type: mongoose.Schema.Types.String,
+  boardId: {
+    type: mongoose.Schema.Types.ObjectId,
     ref: "Board",
     required: true,
   },

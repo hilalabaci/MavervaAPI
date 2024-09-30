@@ -83,15 +83,21 @@ app
   .route("/login")
 
   .post(jsonParser, async function (req, res) {
-    const filter = { email: req.body.email, password: req.body.password };
-    const user = await User.findOne(filter);
-    if (user === null) {
-      res.status(400).json({
+    try {
+      const filter = { email: req.body.email, password: req.body.password };
+      const user = await User.findOne(filter);
+      if (user === null) {
+        res.status(400).json({
+          message: "Check your password or email",
+        });
+        return;
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({
         message: "Check your password or email",
       });
-      return;
     }
-    res.json(user);
   });
 
 /***************************** /project *****************************/
@@ -146,7 +152,7 @@ app
   .route("/project")
 
   .post(jsonParser, async function (req, res) {
-    const { title, userId, projectKey, boardName } = req.body;
+    const { title, userId, projectKey, boardTitle } = req.body;
 
     try {
       const newProject = new Project({
@@ -159,7 +165,7 @@ app
       await newProject.save();
 
       const board = new Board({
-        title: boardName ?? `${projectKey} board`,
+        title: boardTitle ?? `${projectKey} board`,
         users: [userId], // Yeni panoya kullanıcı ekleniyor
         projectIds: [newProject._id],
       });
@@ -290,11 +296,24 @@ app
   .route("/board")
   .post(jsonParser, async function (req, res) {
     try {
-      const { title, userId, projectKey } = req.body;
+      const { title, userId, projectKeys } = req.body;
+
+      const projects = await Project.find({
+        projectKey: { $in: projectKeys },
+        users: [userId],
+      });
+
+      if (!projects.length) {
+        res.status(400).json({
+          message: "Projects not found",
+        });
+        return;
+      }
+
       const newBoard = new Board({
         title: title,
         users: [userId], // Yeni panoya kullanıcı ekleniyor
-        projectKey: projectKey,
+        projectIds: projects.map((p) => p._id),
       });
       await newBoard.save();
       const user = await User.findById(userId);
@@ -379,19 +398,38 @@ app
   .route("/card")
 
   .post(jsonParser, async function (req, res) {
-    const { content, projectKey, status, userId, boardId } = req.body;
-    const newCard = new Card({
-      userId: userId,
-      content: content,
-      projectKey: projectKey,
-      status: status,
-      boardId: boardId,
-    });
-    await newCard.save();
+    try {
+      const { content, projectKey, status, userId, boardId } = req.body;
+      const project = await Project.find({
+        projectKey: { $in: projectKey },
+        users: [userId],
+        boards: { $in: boardId },
+      });
+      if (!project.length) {
+        res.status(400).json({
+          message: "Projects not found",
+        });
+        return;
+      }
 
-    let cardToReturn = await newCard.populate("userId");
-    cardToReturn = await cardToReturn.populate("labels");
-    res.json(cardToReturn.toJSON());
+      const newCard = new Card({
+        userId: userId,
+        content: content,
+        projectKey: projectKey,
+        status: status,
+        boardId: boardId,
+      });
+
+      await newCard.save();
+      let cardToReturn = await newCard.populate("userId");
+      cardToReturn = await cardToReturn.populate("labels");
+      res.json(cardToReturn.toJSON());
+    } catch (err) {
+      res.status(500).json({
+        message: "Error creating card",
+        error: (err as Error).message,
+      });
+    }
   })
   .get(async function (req, res) {
     const filter = { boardId: req.query.boardId };
