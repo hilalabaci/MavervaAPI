@@ -22,12 +22,9 @@ var jsonParser = bodyParser.json();
 const wss = new WebSocketServer({ port: 8080 });
 
 /***************************** / *****************************/
-app
-  .route("/")
-
-  .get(async function (req, res) {
-    res.json({ version: "1.2" });
-  });
+app.route("/").get(async function (req, res) {
+  res.json({ version: "1.2" });
+});
 
 /***************************** /register *****************************/
 app
@@ -224,45 +221,66 @@ app
     res.sendStatus(200);
   });
 
-app.route("/project/add-user").post(jsonParser, async function (req, res) {
-  const { projectId, email, userId } = req.body;
-  const userMatch = await User.findOne({ email: email });
-  if (userMatch === null) {
-    res.status(400).json({
-      message: "User not found",
-    });
-    return;
-  }
-  const projectMatch = await Project.findOne({ _id: projectId });
-  if (!projectMatch) {
-    res.status(400).json({
-      message: "Project not found",
-    });
-    return;
-  }
-  // Check if the user is already associated with the project
-  if (projectMatch.users.includes(userMatch._id)) {
-    return res
-      .status(400)
-      .json({ message: "User already exists in the project" });
-  }
+/***************************** /project/boards/add-user *****************************/
+app
+  .route("/project/boards/add-user")
+  .post(jsonParser, async function (req, res) {
+    try {
+      const { projectId, boardIds, email } = req.body;
 
-  // Add the user to the project's users array
-  projectMatch.users.push(userMatch._id);
-  await projectMatch.save();
+      // Kullanıcının var olup olmadığını kontrol et
+      const userMatch = await User.findOne({ email: email });
+      if (userMatch === null) {
+        return res.status(400).json({
+          message: "User not found",
+        });
+      }
+      // Projenin var olup olmadığını kontrol et
+      const projectMatch = await Project.findOne({ _id: projectId });
+      if (!projectMatch) {
+        return res.status(400).json({
+          message: "Project not found",
+        });
+      }
+      // Board'ların var olup olmadığını kontrol et
+      const boardsMatch = await Board.find({ _id: { $in: boardIds } });
+      if (!boardsMatch || boardsMatch.length === 0) {
+        return res.status(400).json({
+          message: "No boards found",
+        });
+      }
+      // Proje genelinde kullanıcı olup olmadığını kontrol et
+      if (projectMatch.users.includes(userMatch._id)) {
+        return res.status(400).json({
+          message: "User already exists in the project",
+        });
+      }
 
-  /***************************** notification/post *****************************/
+      // Her bir board'a kullanıcı ekle
+      for (const board of boardsMatch) {
+        if (!board.users.includes(userMatch._id)) {
+          board.users.push(userMatch._id); // Kullanıcıyı board'a ekle
+          await board.save(); // Her board'u ayrı ayrı kaydet
+        }
+      }
 
-  const newNotification = new Notification({
-    fromUserId: userId,
-    toUserId: userMatch._id,
-    message: `Added you to the project ${projectMatch.title}`,
+      // Kullanıcıyı projeye ekle
+      projectMatch.users.push(userMatch._id);
+      await projectMatch.save();
+
+      // Başarılı mesajı dön
+      res
+        .status(200)
+        .json({ message: "User successfully added to boards and project" });
+    } catch (err) {
+      // Hata durumunda yakala ve hata mesajı döndür
+      console.error("Error adding user to boards:", err);
+      res.status(500).json({
+        message: "An error occurred while adding user to boards",
+        error: (err as Error).message,
+      });
+    }
   });
-
-  await newNotification.save();
-
-  res.json(projectMatch.toJSON());
-});
 
 /***************************** /projects/:projectKey *****************************/
 
@@ -300,7 +318,7 @@ app
 
       const projects = await Project.find({
         projectKey: { $in: projectKeys },
-        users: [userId],
+        users: { $in: userId },
       });
 
       if (!projects.length) {
@@ -309,16 +327,22 @@ app
         });
         return;
       }
-
       const newBoard = new Board({
         title: title,
         users: [userId], // Yeni panoya kullanıcı ekleniyor
         projectIds: projects.map((p) => p._id),
       });
       await newBoard.save();
+
       const user = await User.findById(userId);
       user?.boards.push(newBoard._id);
       await user?.save();
+
+      for (var i = 0; i < projects.length; i++) {
+        var project = projects[i];
+        project.boards.push(newBoard.id);
+        await project.save();
+      }
 
       res.status(201).json({
         message: "Board created successfully",
@@ -400,12 +424,15 @@ app
   .post(jsonParser, async function (req, res) {
     try {
       const { content, projectKey, status, userId, boardId } = req.body;
-      const project = await Project.find({
-        projectKey: { $in: projectKey },
-        users: [userId],
+      const project = await Project.findOne({
+        projectKey: projectKey,
+        users: { $in: userId },
+        //FIX
         boards: { $in: boardId },
+        //boardlarin icine projetid ekleniyor ama projelerin icine boardid eklenmiyor.
       });
-      if (!project.length) {
+
+      if (!project) {
         res.status(400).json({
           message: "Projects not found",
         });
@@ -432,9 +459,24 @@ app
     }
   })
   .get(async function (req, res) {
-    const filter = { boardId: req.query.boardId };
-    const all = await Card.find(filter).populate("labels").populate("userId");
-    res.json(all);
+    const boardId = req.query.boardId; // boardId string olarak alınmalı
+    if (!boardId) {
+      return res.status(400).json({ message: "BoardId is required" });
+    }
+
+    try {
+      // Doğrudan string olan boardId'yi sorguya ekleyin
+      const cards = await Card.find({ boardId })
+        .populate("labels")
+        .populate("userId");
+
+      res.json(cards);
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "An error occurred while fetching cards" });
+    }
   })
 
   .patch(jsonParser, async function (req, res) {
