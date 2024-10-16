@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
-/* import User from "./models/user.js"; */
 
+type ObjectId = mongoose.Types.ObjectId;
+export interface BoardType extends mongoose.Document<ObjectId> {
+  title: string;
+  projectIds: ObjectId[];
+  users: ObjectId[];
+}
 const boardSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -21,4 +26,4 @@ const boardSchema = new mongoose.Schema({
   ],
 });
 
-export default mongoose.model("Board", boardSchema);
+export default mongoose.model<BoardType>("Board", boardSchema);

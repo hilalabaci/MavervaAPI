@@ -4,15 +4,15 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import User from "./models/User";
+import User, { UserType } from "./models/User";
 import Card from "./models/Card";
 import Project from "./models/Project";
 import Label, { LabelType } from "./models/Label";
 import Notification from "./models/Notification";
 import { WebSocketServer } from "ws";
 import Board from "./models/Board";
-dotenv.config();
 
+dotenv.config();
 mongoose.connect(
   `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_URL}/userDB`,
 );
@@ -417,6 +417,38 @@ app
       });
     }
   });
+/***************************** Users in Board *****************************/
+app
+  .route("/users")
+
+  .get(async function (req, res) {
+    try {
+      const boardId = req.query.boardId; // boardId string olarak alınmalı
+      if (!boardId) {
+        return res.status(400).json({ message: "BoardId is required" });
+      }
+      const board = await Board.findById(boardId).populate<{
+        users: UserType[];
+      }>("users");
+
+      if (!board) {
+        return res
+          .status(404)
+          .json({ message: "No users found for this board" });
+      }
+      const filteredUsers = board.users.map((user) => ({
+        email: user.email,
+        fullName: user.fullName,
+      }));
+      res.status(200).json(filteredUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res
+        .status(500)
+        .json({ message: "An error occurred while fetching users" });
+    }
+  });
+
 /***************************** /card *****************************/
 app
   .route("/card")
@@ -427,9 +459,7 @@ app
       const project = await Project.findOne({
         projectKey: projectKey,
         users: { $in: userId },
-        //FIX
         boards: { $in: boardId },
-        //boardlarin icine projetid ekleniyor ama projelerin icine boardid eklenmiyor.
       });
 
       if (!project) {
@@ -459,13 +489,12 @@ app
     }
   })
   .get(async function (req, res) {
-    const boardId = req.query.boardId; // boardId string olarak alınmalı
+    const boardId = req.query.boardId;
     if (!boardId) {
       return res.status(400).json({ message: "BoardId is required" });
     }
 
     try {
-      // Doğrudan string olan boardId'yi sorguya ekleyin
       const cards = await Card.find({ boardId })
         .populate("labels")
         .populate("userId");
@@ -504,8 +533,8 @@ app
   .post(jsonParser, async function (req, res) {
     const { colour, cardId, add } = req.body;
     const card = await Card.findById(cardId)
-      .populate("labels")
-      .populate("userId");
+      .populate<{ labels: LabelType[] }>("labels")
+      .populate<{ userId: UserType }>("userId");
 
     if (!card) {
       res.status(400).json({
@@ -514,13 +543,11 @@ app
       return;
     }
 
-    const labelExists = (card.labels as LabelType[])?.find(
-      (label) => label.colour === colour,
-    );
+    const labelExists = card.labels?.find((label) => label.colour === colour);
     if (labelExists) {
       /* remove label */
       if (!add) {
-        card.labels = (card.labels as LabelType[]).filter(
+        card.labels = card.labels.filter(
           (label) => label._id !== labelExists._id,
         );
         await card.save();
@@ -545,7 +572,7 @@ app
     });
     await newLabel.save();
 
-    (card.labels as mongoose.Types.ObjectId[]).push(newLabel._id);
+    card.labels.push(newLabel);
     await card.save();
     let cardsToReturn = await card.populate("labels");
     cardsToReturn = await cardsToReturn.populate("userId");

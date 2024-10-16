@@ -1,14 +1,12 @@
 import mongoose from "mongoose";
-import { LabelType } from "./Label";
-/* import User from "./models/user.js"; */
 
 type ObjectId = mongoose.Types.ObjectId;
 export interface CardType extends mongoose.Document<ObjectId> {
-  userId: mongoose.Types.ObjectId;
+  userId: ObjectId;
   content?: string;
-  boardId: mongoose.Types.ObjectId;
+  boardId: ObjectId;
   status: number;
-  labels: mongoose.Types.ObjectId[] | LabelType[]; // Burada hem ObjectId hem de LabelType olabileceğini belirtir.
+  labels: ObjectId[]; // Burada hem ObjectId hem de LabelType olabileceğini belirtir.
 }
 const cardSchema = new mongoose.Schema({
   userId: {

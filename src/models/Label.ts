@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 type ObjectId = mongoose.Types.ObjectId;
 export interface LabelType extends mongoose.Document<ObjectId> {
   colour: string;
-  cardId: mongoose.Types.ObjectId;
+  cardId: ObjectId;
 }
 const labelSchema = new mongoose.Schema({
   colour: String,
@@ -14,4 +14,4 @@ const labelSchema = new mongoose.Schema({
   },
 });
 
-export default mongoose.model("Label", labelSchema);
+export default mongoose.model<LabelType>("Label", labelSchema);

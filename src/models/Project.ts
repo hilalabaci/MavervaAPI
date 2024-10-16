@@ -1,6 +1,13 @@
 import mongoose from "mongoose";
 /* import User from "./models/user.js"; */
 
+type ObjectId = mongoose.Types.ObjectId;
+export interface ProjectType extends mongoose.Document<ObjectId> {
+  title: string;
+  projectKey: string;
+  users: ObjectId[];
+  boards: ObjectId[];
+}
 const projectSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -24,4 +31,4 @@ const projectSchema = new mongoose.Schema({
   ],
 });
 
-export default mongoose.model("Project", projectSchema);
+export default mongoose.model<ProjectType>("Project", projectSchema);
