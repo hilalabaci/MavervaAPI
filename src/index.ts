@@ -149,21 +149,21 @@ app
   .route("/project")
 
   .post(jsonParser, async function (req, res) {
-    const { title, userId, projectKey, boardTitle } = req.body;
+    const { title, leadUser, projectKey, boardTitle } = req.body;
 
     try {
       const newProject = new Project({
         title: title,
-        users: [userId], // Yeni panoya kullanıcı ekleniyor
+        leadUser: leadUser,
+        users: [leadUser], // Yeni panoya kullanıcı ekleniyor
         projectKey: projectKey,
         boards: [],
       });
-
       await newProject.save();
 
       const board = new Board({
         title: boardTitle ?? `${projectKey} board`,
-        users: [userId], // Yeni panoya kullanıcı ekleniyor
+        users: [leadUser], // Yeni panoya kullanıcı ekleniyor
         projectIds: [newProject._id],
       });
 
@@ -173,7 +173,7 @@ app
       await newProject.save();
 
       // Kullanıcının projeject dizisine panoyu ekleyin
-      const user = await User.findById(userId);
+      const user = await User.findById(leadUser);
       user?.projects.push(newProject._id);
       await user?.save();
 
@@ -200,7 +200,8 @@ app
         path: "users",
         select: "-password", // Exclude the password field
       })
-      .populate("boards");
+      .populate("boards")
+      .populate({ path: "leadUser", select: "-password -boards -projects" });
     res.json(projects);
   })
 
@@ -439,6 +440,7 @@ app
       const filteredUsers = board.users.map((user) => ({
         email: user.email,
         fullName: user.fullName,
+        _id: user._id,
       }));
       res.status(200).json(filteredUsers);
     } catch (error) {

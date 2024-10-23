@@ -5,6 +5,7 @@ type ObjectId = mongoose.Types.ObjectId;
 export interface ProjectType extends mongoose.Document<ObjectId> {
   title: string;
   projectKey: string;
+  leadUser: ObjectId;
   users: ObjectId[];
   boards: ObjectId[];
 }
@@ -17,6 +18,12 @@ const projectSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  leadUser: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+
   users: [
     {
       ref: "User",
