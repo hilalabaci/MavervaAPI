@@ -2,19 +2,32 @@ import mongoose from "mongoose";
 
 type ObjectId = mongoose.Types.ObjectId;
 export interface CardType extends mongoose.Document<ObjectId> {
-  userId: ObjectId;
   content?: string;
-  boardId: ObjectId;
   status: number;
-  labels: ObjectId[]; // Burada hem ObjectId hem de LabelType olabileceğini belirtir.
+  userId: ObjectId;
+  cardKey: string;
+  createdAt: Date;
+  labels: ObjectId[];
+  projectKey: ObjectId;
+  boardId: ObjectId;
 }
 const cardSchema = new mongoose.Schema({
+  content: String,
+  status: {
+    required: true,
+    type: Number,
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  content: String,
+  cardKey: {
+    required: true,
+    type: String,
+  },
+  createdAt: { type: Date, default: Date.now },
+  labels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Label" }],
   projectKey: {
     type: mongoose.Schema.Types.String,
     ref: "Project",
@@ -25,11 +38,6 @@ const cardSchema = new mongoose.Schema({
     ref: "Board",
     required: true,
   },
-  status: {
-    required: true,
-    type: Number,
-  },
-  labels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Label" }],
 });
 
 export default mongoose.model<CardType>("Card", cardSchema);

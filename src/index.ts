@@ -11,7 +11,12 @@ import Label, { LabelType } from "./models/Label";
 import Notification from "./models/Notification";
 import { WebSocketServer } from "ws";
 import Board from "./models/Board";
+import Backlog from "./models/Backlog";
+import Sprint from "./models/Sprint";
 
+function getRandomNumber(min = 1, max = 100000) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 dotenv.config();
 mongoose.connect(
   `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_URL}/userDB`,
@@ -450,6 +455,112 @@ app
         .json({ message: "An error occurred while fetching users" });
     }
   });
+/***************************** /backlog *****************************/
+app
+  .route("/projects/:projectKey/boards/:boardId/backlog")
+
+  .get(async function (req, res) {
+    const { boardId, projectKey } = req.params;
+    if (!boardId && !projectKey) {
+      return res
+        .status(400)
+        .json({ message: "Board Id and Project Key is required" });
+    }
+
+    try {
+      let backlog = await Backlog.findOne({ boardId }).populate({
+        path: "cardIds", // This is the field you want to populate
+        populate: [
+          {
+            path: "userId", // Populate the userId field in the Card
+            model: "User", // Specify the model name for userId
+          },
+          {
+            path: "labels", // Populate the labels field in the Card
+            model: "Label", // Specify the model name for labels
+          },
+        ],
+      });
+
+      if (backlog) {
+        res.json(backlog?.cardIds);
+        return;
+      }
+
+      backlog = new Backlog({
+        boardId: boardId,
+        cardIds: [],
+      });
+
+      await backlog.save();
+      res.json([]);
+      return;
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "An error occurred while fetching cards" });
+    }
+  });
+/***************************** /sprint *****************************/
+app
+  .route("/sprint")
+
+  .post(jsonParser, async function (req, res) {
+    try {
+      const { name, sprintGoal, startDate, endDate, boardId, userId } =
+        req.body;
+
+      const findBoard = await Board.find({
+        _id: boardId,
+        users: { $in: userId },
+      });
+      console.log(findBoard);
+      if (!findBoard) {
+        res.status(400).json({
+          message: "board not found",
+        });
+        return;
+      }
+      const newSprint = new Sprint({
+        name: name,
+        sprintGoal: sprintGoal,
+        startDate: startDate,
+        endDate: endDate,
+        boardId: boardId,
+        userId: userId,
+      });
+
+      await newSprint.save();
+      res.status(201).json({
+        message: "Sprint created successfully",
+        newSprint,
+      });
+      console.log(newSprint);
+    } catch (err) {
+      res.status(500).json({
+        message: "Error creating board",
+        error: (err as Error).message,
+      });
+    }
+  })
+  .get(async function (req, res) {
+    const boardId = req.query.boardId;
+    if (!boardId) {
+      return res.status(400).json({ message: "BoardId is required" });
+    }
+
+    try {
+      const sprints = await Sprint.find({ boardId }).populate("cardIds");
+
+      res.json(sprints);
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "An error occurred while fetching cards" });
+    }
+  });
 
 /***************************** /card *****************************/
 app
@@ -457,7 +568,10 @@ app
 
   .post(jsonParser, async function (req, res) {
     try {
-      const { content, projectKey, status, userId, boardId } = req.body;
+      const { content, projectKey, status, userId, boardId, sprintId } =
+        req.body;
+
+      console.log(sprintId);
       const project = await Project.findOne({
         projectKey: projectKey,
         users: { $in: userId },
@@ -471,17 +585,36 @@ app
         return;
       }
 
+      const existingCards = await Card.find({ projectKey });
+      const cardKeyNumber = existingCards.length + 1;
+      const cardKey = `${projectKey}-${cardKeyNumber}`;
+      // const cardKeyNumber = getRandomNumber(1, 100000);
+      // const cardKey = `${projectKey}-${cardKeyNumber}`;
+
       const newCard = new Card({
         userId: userId,
         content: content,
         projectKey: projectKey,
         status: status,
         boardId: boardId,
+        cardKey: cardKey,
       });
 
       await newCard.save();
+
+      if (sprintId) {
+        const selectedSprint = await Sprint.findOne({ _id: sprintId });
+        selectedSprint?.cardIds.push(newCard._id);
+        await selectedSprint?.save();
+      } else {
+        const backlog = await Backlog.findOne({ boardId: boardId });
+        backlog?.cardIds.push(newCard._id);
+        await backlog?.save();
+      }
+
       let cardToReturn = await newCard.populate("userId");
       cardToReturn = await cardToReturn.populate("labels");
+
       res.json(cardToReturn.toJSON());
     } catch (err) {
       res.status(500).json({
