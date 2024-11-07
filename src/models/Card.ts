@@ -23,7 +23,6 @@ const cardSchema = new mongoose.Schema({
     required: true,
   },
   cardKey: {
-    required: true,
     type: String,
   },
   createdAt: { type: Date, default: Date.now },

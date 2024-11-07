@@ -5,7 +5,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import User, { UserType } from "./models/User";
-import Card from "./models/Card";
+import Card, { CardType } from "./models/Card";
 import Project from "./models/Project";
 import Label, { LabelType } from "./models/Label";
 import Notification from "./models/Notification";
@@ -515,7 +515,6 @@ app
         _id: boardId,
         users: { $in: userId },
       });
-      console.log(findBoard);
       if (!findBoard) {
         res.status(400).json({
           message: "board not found",
@@ -536,7 +535,6 @@ app
         message: "Sprint created successfully",
         newSprint,
       });
-      console.log(newSprint);
     } catch (err) {
       res.status(500).json({
         message: "Error creating board",
@@ -551,7 +549,15 @@ app
     }
 
     try {
-      const sprints = await Sprint.find({ boardId }).populate("cardIds");
+      const sprints = await Sprint.find({ boardId }).populate({
+        path: "cardIds", // This is the field you want to populate
+        populate: [
+          {
+            path: "userId", // Populate the userId field in the Card
+            model: "User", // Specify the model name for userId
+          },
+        ],
+      });
 
       res.json(sprints);
     } catch (error) {
@@ -571,7 +577,6 @@ app
       const { content, projectKey, status, userId, boardId, sprintId } =
         req.body;
 
-      console.log(sprintId);
       const project = await Project.findOne({
         projectKey: projectKey,
         users: { $in: userId },
@@ -643,15 +648,78 @@ app
     }
   })
 
-  .patch(jsonParser, async function (req, res) {
-    const filter = { _id: req.body.id };
-    const update = { status: req.body.status };
-    const card = await Card.findOneAndUpdate(filter, update, {
+  .put(jsonParser, async function (req, res) {
+    const oldSprintId = req.body.oldSprintId as string | undefined;
+    const newSprintId = req.body.newSprintId as string | undefined;
+    const cardId = req.body.cardId;
+    const boardId = req.body.boardId as string | undefined;
+    const status = req.body.status;
+    console.log(`newSprintId:${newSprintId}`);
+    /****** update Status ******/
+
+    const filter = { _id: cardId };
+    const update = { status: status };
+
+    const updatedCard = await Card.findOneAndUpdate(filter, update, {
       new: true,
     })
       .populate("labels")
       .populate("userId");
-    res.json(card?.toJSON());
+
+    /****** Sprint to Backlog ******/
+    if (!newSprintId) {
+      const findBacklog = await Backlog.findOne({ boardId });
+      findBacklog?.cardIds.push(cardId);
+      await findBacklog?.save();
+      const oldSprint = await Sprint.findById(oldSprintId);
+
+      if (oldSprint) {
+        oldSprint.cardIds = oldSprint.cardIds.filter(
+          (card) => card._id !== cardId,
+        );
+        await oldSprint.save();
+      }
+    }
+
+    /****** Backlog to Sprint ******/
+    if (newSprintId && !oldSprintId) {
+      const newSprint = await Sprint.findById(newSprintId);
+      const backlog = await Backlog.findOne({ boardId });
+      console.log(newSprint, backlog);
+
+      if (newSprint) {
+        if (!newSprint.cardIds.includes(cardId)) {
+          newSprint.cardIds.push(cardId);
+        }
+        if (backlog) {
+          backlog.cardIds = backlog?.cardIds.filter(
+            (card) => card.toString() !== cardId.toString(),
+          );
+
+          await backlog.save();
+        }
+      }
+      await newSprint?.save();
+    }
+    /****** Sprint to Sprint ******/
+    if (newSprintId && oldSprintId) {
+      const newSprint = await Sprint.findById(newSprintId);
+      const oldSprint = await Sprint.findById(oldSprintId);
+
+      if (newSprint && oldSprint) {
+        if (!newSprint.cardIds.includes(cardId)) {
+          newSprint.cardIds.push(cardId);
+        }
+        if (oldSprint) {
+          oldSprint.cardIds = oldSprint?.cardIds.filter(
+            (card) => card.toString() !== cardId.toString(),
+          );
+          await oldSprint.save();
+        }
+        await newSprint.save();
+      }
+    }
+    res.json(updatedCard?.toJSON());
   })
 
   .delete(async function (req, res) {
