@@ -390,39 +390,6 @@ app
     res.json(boards);
   });
 
-/***************************** /board/: *****************************/
-
-app
-  .route("/projects/:projectKey/boards/:boardId")
-
-  .get(async function (req, res) {
-    const { boardId, projectKey } = req.params;
-    try {
-      const project = await Project.findOne({
-        projectKey: projectKey,
-      });
-
-      if (!project) {
-        return res.status(400).json({ message: "Project not found" });
-      }
-      const filter = { _id: boardId, projectIds: project._id };
-      const selectedBoard = await Board.findOne(filter).populate({
-        path: "users",
-        select: "-password", // Parola alanını dışla
-      });
-
-      if (!selectedBoard) {
-        return res.status(404).json({ message: "Board not found" });
-      }
-
-      res.json(selectedBoard);
-    } catch (error) {
-      res.status(500).json({
-        message: "Error fetching board",
-        error: (error as Error).message,
-      });
-    }
-  });
 /***************************** Users in Board *****************************/
 app
   .route("/users")
@@ -566,8 +533,80 @@ app
         .status(500)
         .json({ message: "An error occurred while fetching cards" });
     }
+  })
+  .put(jsonParser, async function (req, res) {
+    const sprintId = req.body.sprintId as string | undefined;
+    const boardId = req.body.boardId;
+    try {
+      // Update the selected sprint to active: true
+      const filter = { _id: sprintId };
+      const update = { active: true };
+      const updatedSprint = await Sprint.findOneAndUpdate(filter, update, {
+        new: true,
+      }).populate("cardIds");
+
+      // Set active: false for all other sprints
+      const updateInactiveSprints = await Sprint.updateMany(
+        { _id: { $ne: sprintId }, boardId: boardId }, // Filter to exclude the active sprint
+        { active: false },
+      );
+
+      res.status(200).json({
+        message: "Sprint updated successfully",
+        updatedSprint,
+        updateInactiveSprints,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "An error occurred", error });
+    }
   });
 
+/***************************** Active Sprint *****************************/
+app
+  .route("/projects/:projectKey/boards/:boardId")
+
+  .get(async function (req, res) {
+    const { boardId, projectKey } = req.params;
+    if (!boardId && !projectKey) {
+      return res
+        .status(400)
+        .json({ message: "Board Id and Project Key is required" });
+    }
+
+    try {
+      let sprint = await Sprint.findOne({ active: true, boardId })
+        .populate({
+          path: "cardIds",
+          populate: [
+            {
+              path: "userId",
+              model: "User",
+            },
+            {
+              path: "labels",
+              model: "Label",
+            },
+          ],
+        })
+        .populate({
+          path: "boardId",
+          select: "title",
+        });
+
+      if (sprint) {
+        console.log(sprint.cardIds);
+        return res.json(sprint);
+      }
+      return res
+        .status(400)
+        .json({ message: "Board Id and Project Key is required" });
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "An error occurred while fetching cards" });
+    }
+  });
 /***************************** /card *****************************/
 app
   .route("/card")
@@ -606,7 +645,7 @@ app
       });
 
       await newCard.save();
-
+      console.log(sprintId);
       if (sprintId) {
         const selectedSprint = await Sprint.findOne({ _id: sprintId });
         selectedSprint?.cardIds.push(newCard._id);

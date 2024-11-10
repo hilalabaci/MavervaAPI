@@ -8,6 +8,7 @@ export interface SprintType extends mongoose.Document<ObjectId> {
   endDate: Date;
   cardIds: ObjectId[];
   boardId: ObjectId;
+  active: boolean;
 }
 const sprintSchema = new mongoose.Schema({
   name: {
@@ -35,6 +36,11 @@ const sprintSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
+  },
+  active: {
+    type: mongoose.Schema.Types.Boolean,
+    required: true,
+    default: false,
   },
 });
 
