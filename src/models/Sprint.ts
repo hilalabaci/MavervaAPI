@@ -9,6 +9,7 @@ export interface SprintType extends mongoose.Document<ObjectId> {
   cardIds: ObjectId[];
   boardId: ObjectId;
   active: boolean;
+  
 }
 const sprintSchema = new mongoose.Schema({
   name: {

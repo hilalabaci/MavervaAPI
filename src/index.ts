@@ -13,6 +13,7 @@ import { WebSocketServer } from "ws";
 import Board from "./models/Board";
 import Backlog from "./models/Backlog";
 import Sprint from "./models/Sprint";
+import { Column } from "./models/Column";
 
 function getRandomNumber(min = 1, max = 100000) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -340,6 +341,15 @@ app
       });
       await newBoard.save();
 
+      const initialColumns = [
+        { title: "Backlog", status: 0, boardId: newBoard._id },
+        { title: "To Do", status: 1, boardId: newBoard._id },
+        { title: "In Progress", status: 2, boardId: newBoard._id },
+        { title: "Done", status: 3, boardId: newBoard._id },
+      ];
+
+      await Column.insertMany(initialColumns);
+
       const user = await User.findById(userId);
       user?.boards.push(newBoard._id);
       await user?.save();
@@ -571,6 +581,7 @@ app
       return res
         .status(400)
         .json({ message: "Board Id and Project Key is required" });
+      return;
     }
 
     try {
@@ -594,7 +605,6 @@ app
         });
 
       if (sprint) {
-        console.log(sprint.cardIds);
         return res.json(sprint);
       }
       return res
@@ -605,6 +615,28 @@ app
       res
         .status(500)
         .json({ message: "An error occurred while fetching cards" });
+    }
+  });
+
+/***************************** /column *****************************/
+
+app
+  .route("/column")
+
+  .post(jsonParser, async function (req, res) {})
+
+  .get(async function (req, res) {
+    const projectKey = req.query.projectKey;
+    const boardId = req.query.boardId;
+
+    try {
+      const column = await Column.find({ boardId }).populate("cardIds");
+      res.json(column);
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "An error occurred while fetching columns" });
     }
   });
 /***************************** /card *****************************/
@@ -645,7 +677,6 @@ app
       });
 
       await newCard.save();
-      console.log(sprintId);
       if (sprintId) {
         const selectedSprint = await Sprint.findOne({ _id: sprintId });
         selectedSprint?.cardIds.push(newCard._id);
@@ -693,7 +724,6 @@ app
     const cardId = req.body.cardId;
     const boardId = req.body.boardId as string | undefined;
     const status = req.body.status;
-    console.log(`newSprintId:${newSprintId}`);
     /****** update Status ******/
 
     const filter = { _id: cardId };
@@ -724,7 +754,6 @@ app
     if (newSprintId && !oldSprintId) {
       const newSprint = await Sprint.findById(newSprintId);
       const backlog = await Backlog.findOne({ boardId });
-      console.log(newSprint, backlog);
 
       if (newSprint) {
         if (!newSprint.cardIds.includes(cardId)) {

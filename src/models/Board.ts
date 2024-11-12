@@ -5,6 +5,7 @@ export interface BoardType extends mongoose.Document<ObjectId> {
   title: string;
   projectIds: ObjectId[];
   users: ObjectId[];
+  columnIds: ObjectId[];
 }
 const boardSchema = new mongoose.Schema({
   title: {
@@ -22,6 +23,12 @@ const boardSchema = new mongoose.Schema({
     {
       ref: "User",
       type: mongoose.Schema.Types.ObjectId,
+    },
+  ],
+  columnIds: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Column",
     },
   ],
 });
