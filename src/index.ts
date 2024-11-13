@@ -25,7 +25,7 @@ mongoose.connect(
 const app = express();
 app.use(cors());
 var jsonParser = bodyParser.json();
-const wss = new WebSocketServer({ port: 8080 });
+// const wss = new WebSocketServer({ port: 8080 });
 
 /***************************** / *****************************/
 app.route("/").get(async function (req, res) {
@@ -105,52 +105,52 @@ app
 
 /***************************** /project *****************************/
 
-wss.on("connection", (ws) => {
-  console.log("Client connected");
+// wss.on("connection", (ws) => {
+//   console.log("Client connected");
 
-  // Mesaj dinleme
-  ws.on("message", async (message: string) => {
-    const data = JSON.parse(message);
-    let projectKey = "";
-    const chars = data.title.split(" ") ?? ["Undefined"];
-    if (chars.length === 1) {
-      projectKey = (
-        (chars?.[0]?.[0] ?? "") +
-        (chars?.[0]?.[1] ?? "") +
-        (chars?.[0]?.[2] ?? "")
-      ).toUpperCase();
-    } else {
-      let newKey = "";
-      let i = 0;
-      while (i < chars.length) {
-        newKey = newKey + chars[i][0];
-        i++;
-      }
-      projectKey = newKey.toUpperCase();
-    }
+//   // Mesaj dinleme
+//   ws.on("message", async (message: string) => {
+//     const data = JSON.parse(message);
+//     let projectKey = "";
+//     const chars = data.title.split(" ") ?? ["Undefined"];
+//     if (chars.length === 1) {
+//       projectKey = (
+//         (chars?.[0]?.[0] ?? "") +
+//         (chars?.[0]?.[1] ?? "") +
+//         (chars?.[0]?.[2] ?? "")
+//       ).toUpperCase();
+//     } else {
+//       let newKey = "";
+//       let i = 0;
+//       while (i < chars.length) {
+//         newKey = newKey + chars[i][0];
+//         i++;
+//       }
+//       projectKey = newKey.toUpperCase();
+//     }
 
-    let isKeyUnique = false;
-    let uniqueKey = projectKey;
-    let suffix = 1;
-    while (!isKeyUnique) {
-      const existingProject = await Project.findOne({ projectKey: uniqueKey });
-      if (!existingProject) {
-        isKeyUnique = true;
-      } else {
-        // Eğer aynı key varsa, sonuna bir sayı ekleyerek benzersiz yap
-        uniqueKey = `${projectKey}${suffix}`;
-        suffix++;
-      }
-    }
-    ws.send(JSON.stringify({ projectKey: uniqueKey }));
-    sendProjectKeyToClient(uniqueKey);
-  });
+//     let isKeyUnique = false;
+//     let uniqueKey = projectKey;
+//     let suffix = 1;
+//     while (!isKeyUnique) {
+//       const existingProject = await Project.findOne({ projectKey: uniqueKey });
+//       if (!existingProject) {
+//         isKeyUnique = true;
+//       } else {
+//         // Eğer aynı key varsa, sonuna bir sayı ekleyerek benzersiz yap
+//         uniqueKey = `${projectKey}${suffix}`;
+//         suffix++;
+//       }
+//     }
+//     ws.send(JSON.stringify({ projectKey: uniqueKey }));
+//     sendProjectKeyToClient(uniqueKey);
+//   });
 
-  // Project oluşturulduğunda mesaj gönder
-  const sendProjectKeyToClient = (key: string) => {
-    ws.send(JSON.stringify({ message: "Unique Key Created", projectKey: key }));
-  };
-});
+//   // Project oluşturulduğunda mesaj gönder
+//   const sendProjectKeyToClient = (key: string) => {
+//     ws.send(JSON.stringify({ message: "Unique Key Created", projectKey: key }));
+//   };
+// });
 app
   .route("/project")
 
