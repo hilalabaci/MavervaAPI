@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 type ObjectId = mongoose.Types.ObjectId;
-export interface BacklogType extends mongoose.Document<ObjectId> {
+export interface IBacklog extends mongoose.Document<ObjectId> {
   boardId: ObjectId;
   cardIds: ObjectId[];
   sprintIds: ObjectId[];
@@ -21,4 +21,4 @@ const backlogSchema = new mongoose.Schema({
   ],
 });
 
-export default mongoose.model<BacklogType>("Backlog", backlogSchema);
+export default mongoose.model<IBacklog>("Backlog", backlogSchema);

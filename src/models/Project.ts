@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 /* import User from "./models/user.js"; */
 
 type ObjectId = mongoose.Types.ObjectId;
-export interface ProjectType extends mongoose.Document<ObjectId> {
+export interface IProject extends mongoose.Document<ObjectId> {
   title: string;
   projectKey: string;
   leadUser: ObjectId;
@@ -38,4 +38,4 @@ const projectSchema = new mongoose.Schema({
   ],
 });
 
-export default mongoose.model<ProjectType>("Project", projectSchema);
+export default mongoose.model<IProject>("Project", projectSchema);

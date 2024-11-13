@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import validator from "validator";
 
 type ObjectId = mongoose.Types.ObjectId;
-export interface UserType extends mongoose.Document<ObjectId> {
+export interface IUser extends mongoose.Document<ObjectId> {
   fullName: string;
   email: string;
   password: string;
@@ -28,4 +28,4 @@ const userSchema = new mongoose.Schema({
   boards: [{ type: mongoose.Schema.Types.ObjectId, ref: "Board" }],
 });
 
-export default mongoose.model<UserType>("User", userSchema);
+export default mongoose.model<IUser>("User", userSchema);
