@@ -30,7 +30,7 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
       { title: "Backlog", status: 0, boardId: newBoard._id },
       { title: "To Do", status: 1, boardId: newBoard._id },
       { title: "In Progress", status: 2, boardId: newBoard._id },
-      { title: "Done", status: 3, boardId: newBoard._id },
+      { title: "Done", status: 99, boardId: newBoard._id },
     ];
 
     await Column.insertMany(initialColumns);

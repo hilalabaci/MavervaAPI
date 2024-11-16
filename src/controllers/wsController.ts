@@ -27,7 +27,7 @@ export const handleProjectKey = (ws: WebSocket, req: Request): void => {
     let uniqueKey = projectKey;
     let suffix = 1;
     while (!isKeyUnique) {
-      const existingProject = projectService.findByProjectKey(uniqueKey);
+      const existingProject = await projectService.findByProjectKey(uniqueKey);
       if (!existingProject) {
         isKeyUnique = true;
       } else {

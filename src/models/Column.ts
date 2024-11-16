@@ -4,7 +4,6 @@ type ObjectId = mongoose.Types.ObjectId;
 export interface ColumnType extends mongoose.Document<ObjectId> {
   title?: string;
   status: number;
-  projectKey: ObjectId;
   boardId: ObjectId;
   cardIds: ObjectId[];
 }

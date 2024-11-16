@@ -21,7 +21,7 @@ import {
   updateSprint,
 } from "../controllers/sprintController";
 import { getActiveSprint } from "../controllers/activeSprintController";
-import { getColumn } from "../controllers/columnController";
+import { addColumn, getColumn } from "../controllers/columnController";
 import {
   addCard,
   deleteCard,
@@ -61,6 +61,7 @@ router.get("/sprint", getSprints);
 router.put("/sprint", updateSprint);
 router.get("/projects/:projectKey/boards/:boardId", getActiveSprint);
 router.get("/column", getColumn);
+router.post("/column", addColumn);
 router.post("/card", addCard);
 router.get("/card", getCards);
 router.put("/card", updateCard);

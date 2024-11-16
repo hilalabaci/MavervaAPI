@@ -4,10 +4,10 @@ import cors from "cors";
 import mongoose from "mongoose";
 import { config } from "./config";
 import apiRoutes from "./routes/apiRoutes";
-// import wsRoutes from "./routes/wsRoutes";
+import wsRoutes from "./routes/wsRoutes";
 
-const app: Application = express();
-expressWs(app); // Initialize express-ws
+const wsInstance = expressWs(express());
+const app: Application = wsInstance.app;
 
 // Middleware
 app.use(express.json());
@@ -18,7 +18,8 @@ app.use(cors());
 app.use("/", apiRoutes);
 
 // WebSocket Routes
-// wsRoutes(app); 
+const ws = wsRoutes();
+app.use("/ws", ws);
 
 // MongoDB Connection
 mongoose

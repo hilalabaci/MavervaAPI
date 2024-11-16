@@ -1,7 +1,10 @@
-// import { Application } from "express";
-// import { handleProjectKey } from "../controllers/wsController";
+import { handleProjectKey } from "../controllers/wsController";
+import { Router } from "express";
 
-// // This function sets up the WebSocket route using the app instance
-// export default (app: Application): void => {
-//   app.ws("/ws/chat", handleProjectKey);
-// };
+export default function mountRouter() {
+  const router = Router();
+
+  router.ws("/project", handleProjectKey);
+
+  return router;
+}

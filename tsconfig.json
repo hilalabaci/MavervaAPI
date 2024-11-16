@@ -1,9 +1,16 @@
 {
   "compilerOptions": {
+    "target": "ES6",
+    "module": "CommonJS",
     "strict": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     "outDir": "./dist",
     "rootDir": "./src",
-  }
+    "types": ["node", "express", "express-ws"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
 }
