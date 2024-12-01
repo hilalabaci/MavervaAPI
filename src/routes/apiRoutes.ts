@@ -21,7 +21,11 @@ import {
   updateSprint,
 } from "../controllers/sprintController";
 import { getActiveSprint } from "../controllers/activeSprintController";
-import { addColumn, getColumn } from "../controllers/columnController";
+import {
+  addColumn,
+  deleteColumn,
+  getColumn,
+} from "../controllers/columnController";
 import {
   addCard,
   deleteCard,
@@ -38,6 +42,7 @@ import {
   markReadNotification,
 } from "../controllers/notificationController";
 import { home } from "../controllers/homeController";
+import { createProjectKey } from "../controllers/projectKeyController";
 
 const router = Router();
 
@@ -62,6 +67,7 @@ router.put("/sprint", updateSprint);
 router.get("/projects/:projectKey/boards/:boardId", getActiveSprint);
 router.get("/column", getColumn);
 router.post("/column", addColumn);
+router.delete("/column", deleteColumn);
 router.post("/card", addCard);
 router.get("/card", getCards);
 router.put("/card", updateCard);
@@ -71,5 +77,6 @@ router.get("/label", getLabels);
 router.delete("/label", deleteLabel);
 router.get("/notification", getNotification);
 router.post("/notification/mark-read", markReadNotification);
+router.get("/createProjectKey", createProjectKey);
 
 export default router;

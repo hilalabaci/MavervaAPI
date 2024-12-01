@@ -19,13 +19,11 @@ export const createProject = async (
       boards: [],
     });
     await newProject.save();
-
     const board = new Board({
-      title: boardTitle ?? `${projectKey} board`,
+      title: boardTitle || `${projectKey} board`,
       users: [leadUser], // Yeni panoya kullanıcı ekleniyor
       projectIds: [newProject._id],
     });
-
     await board.save();
 
     newProject.boards = [board._id];
