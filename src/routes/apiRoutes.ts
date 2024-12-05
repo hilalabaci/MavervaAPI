@@ -31,6 +31,7 @@ import {
   deleteCard,
   getCards,
   updateCard,
+  updateCardContent,
 } from "../controllers/cardController";
 import {
   addLabel,
@@ -72,6 +73,7 @@ router.post("/card", addCard);
 router.get("/card", getCards);
 router.put("/card", updateCard);
 router.delete("/card", deleteCard);
+router.put("/card/content", updateCardContent);
 router.post("/label", addLabel);
 router.get("/label", getLabels);
 router.delete("/label", deleteLabel);

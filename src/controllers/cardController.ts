@@ -79,6 +79,28 @@ export const getCards = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+export const updateCardContent = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const cardId = req.body.cardId;
+    const newContent = req.body.newContent;
+
+    const filter = { _id: cardId };
+    const update = { content: newContent };
+    const updatedCard = await Card.findOneAndUpdate(filter, update, {
+      new: true,
+    })
+      .populate("labels")
+      .populate("userId");
+
+    res.json(updatedCard?.toJSON());
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "An error occurred while fetching cards" });
+  }
+};
 export const updateCard = async (
   req: Request,
   res: Response,
