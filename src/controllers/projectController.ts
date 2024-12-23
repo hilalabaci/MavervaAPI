@@ -80,6 +80,7 @@ export const deleteProject = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  // Do: only project lead must be delete!
   const id = req.query.id;
   const filter = { projectId: id };
   await Card.deleteMany(filter);

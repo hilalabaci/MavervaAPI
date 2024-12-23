@@ -24,7 +24,6 @@ export const userService = {
       password: data.password,
     });
     await user.save();
-
     return user;
   },
 };
