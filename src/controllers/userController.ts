@@ -1,10 +1,9 @@
 import { Request, Response } from "express";
 import { userService } from "../services/userService";
+import emailService from "../services/email";
+import { EmailTemplateEnum } from "../models/EmailTemplate";
 
-export const getAllUsers = async (
-  _: Request,
-  res: Response,
-): Promise<void> => {
+export const getAllUsers = async (_: Request, res: Response): Promise<void> => {
   const all = await userService.getAll();
   res.json(all);
 };
@@ -46,6 +45,14 @@ export const createUser = async (
       fullName: fullName,
       email: email,
       password: password,
+    });
+
+    await emailService.send({
+      templateType: EmailTemplateEnum.Welcome,
+      to: email,
+      placeholders: {
+        firstName: fullName,
+      },
     });
     res.status(201).json(user);
   } catch (err) {
