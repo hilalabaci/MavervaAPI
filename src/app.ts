@@ -4,7 +4,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import { config } from "./config";
 import apiRoutes from "./routes/apiRoutes";
-import wsRoutes from "./routes/wsRoutes";
+// import wsRoutes from "./routes/wsRoutes";
 
 const wsInstance = expressWs(express());
 const app: Application = wsInstance.app;
@@ -18,8 +18,8 @@ app.use(cors());
 app.use("/", apiRoutes);
 
 // WebSocket Routes
-const ws = wsRoutes();
-app.use("/ws", ws);
+// const ws = wsRoutes();
+// app.use("/ws", ws);
 
 // MongoDB Connection
 mongoose

@@ -52,6 +52,9 @@ export const createUser = async (
       to: email,
       placeholders: {
         firstName: fullName,
+        loginURL: "",
+        setUpProfileURL: "",
+        startUpGuideURL: "",
       },
     });
     res.status(201).json(user);

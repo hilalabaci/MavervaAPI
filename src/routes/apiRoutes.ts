@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { createUser, getAllUsers } from "../controllers/userController";
-import { login } from "../controllers/authController";
+import { login, loginGoogle } from "../controllers/authController";
 import {
   createProject,
   deleteProject,
@@ -52,6 +52,7 @@ router.get("/", home);
 router.post("/register", createUser);
 router.get("/register", getAllUsers);
 router.post("/login", login);
+router.post("/login-google", loginGoogle);
 router.post("/project", createProject);
 router.get("/project", getProjects);
 router.patch("/project", updateProjectTitle);
