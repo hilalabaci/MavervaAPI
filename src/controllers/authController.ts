@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { userService } from "../services/userService";
 import { OAuth2Client } from "google-auth-library";
 import { GoogleUserInfo } from "../services/types";
+import emailService from "../services/email";
+import { EmailTemplateEnum } from "../models/EmailTemplate";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
 
@@ -70,7 +72,16 @@ export const loginGoogle = async (
         fullName: `${googleUserInfo.given_name} ${googleUserInfo.family_name}`,
       });
     }
-
+    await emailService.send({
+      templateType: EmailTemplateEnum.Welcome,
+      to: googleUserInfo.email,
+      placeholders: {
+        firstName: `${googleUserInfo.given_name} ${googleUserInfo.family_name}`,
+        loginURL: "",
+        setUpProfileURL: "",
+        startUpGuideURL: "",
+      },
+    });
     res.status(200).json(user);
     return;
     // if (user === null) {

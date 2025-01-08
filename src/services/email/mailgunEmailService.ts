@@ -1,4 +1,4 @@
-import fetch from "node-fetch";
+import axios from "axios";
 import { EmailSendParams, IEmailService } from "./interfaces";
 import EmailTemplate, { EmailTemplateEnum } from "../../models/EmailTemplate";
 
@@ -7,7 +7,7 @@ const MAILGUN_API_USERNAME = "api";
 
 //2. implement email service
 export class MailgunEmailService implements IEmailService {
-  send = async (params: EmailSendParams) => {
+  send = async (params: EmailSendParams): Promise<boolean> => {
     if (!params || !params.to || !params.templateType) return false;
 
     const template = await EmailTemplate.findOne({ type: params.templateType });
@@ -24,15 +24,14 @@ export class MailgunEmailService implements IEmailService {
       params.placeholders,
     );
 
-    const headers = new Headers();
-    headers.set(
-      "Authorization",
-      "Basic " +
+    const headers: Record<string, string> = {
+      Authorization:
+        "Basic " +
         Buffer.from(MAILGUN_API_USERNAME + ":" + MAILGUN_API_KEY).toString(
           "base64",
         ),
-    );
-    headers.set("Content-Type", "application/x-www-form-urlencoded");
+      "Content-Type": "application/x-www-form-urlencoded",
+    };
 
     const formData = new URLSearchParams(); //expecting form data not JSON
     formData.append("from", template.from);
@@ -40,13 +39,12 @@ export class MailgunEmailService implements IEmailService {
     formData.append("subject", subject);
     formData.append("html", htmlBody);
 
-    const result = await fetch(MAILGUN_API_URL!, {
-      method: "POST",
+    const result = await axios.post(MAILGUN_API_URL!, {
       headers,
       body: formData,
     });
 
-    return result.ok;
+    return result.status < 400;
   };
 
   private replacePlaceholders = (

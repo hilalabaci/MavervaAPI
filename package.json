@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "ProcessAPI",
   "main": "index.js",
-  "type": "module",
   "scripts": {
-    "dev": "nodemon --watch 'src/**/*.ts' --exec tsx src/server.ts",
+    "dev": "nodemon -r dotenv/config src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node -r dotenv/config dist/server.js",
     "build": "tsc"
@@ -13,6 +12,7 @@
   "author": "Hilal ABACI",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.7.9",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -23,9 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^5.1.0",
     "mongoose": "^7.8.2",
-    "nanoid": "^4.0.2",
-    "node-fetch": "^3.3.2",
-    "nodemailer": "^6.9.16",
+    "nanoid": "^5.0.9",
     "validator": "^13.9.0"
   },
   "devDependencies": {
@@ -34,7 +32,6 @@
     "@types/express-ws": "^3.0.5",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.9.0",
-    "@types/nodemailer": "^6.4.17",
     "@types/validator": "^13.12.0",
     "@types/ws": "^8.5.12",
     "@typescript-eslint/eslint-plugin": "^8.1.0",
@@ -42,7 +39,7 @@
     "eslint": "^9.9.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "nodemon": "^2.0.22",
+    "nodemon": "^3.1.9",
     "prettier": "^3.3.3",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",

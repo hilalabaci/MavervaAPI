@@ -47,16 +47,16 @@ export const createUser = async (
       password: password,
     });
 
-    await emailService.send({
-      templateType: EmailTemplateEnum.Welcome,
-      to: email,
-      placeholders: {
-        firstName: fullName,
-        loginURL: "",
-        setUpProfileURL: "",
-        startUpGuideURL: "",
-      },
-    });
+    // await emailService.send({
+    //   templateType: EmailTemplateEnum.Welcome,
+    //   to: email,
+    //   placeholders: {
+    //     firstName: fullName,
+    //     loginURL: "",
+    //     setUpProfileURL: "",
+    //     startUpGuideURL: "",
+    //   },
+    // });
     res.status(201).json(user);
   } catch (err) {
     res.status(400).json({ error: "Failed to create user" });
