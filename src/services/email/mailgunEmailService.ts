@@ -1,6 +1,6 @@
-import axios from "axios";
 import { EmailSendParams, IEmailService } from "./interfaces";
 import EmailTemplate, { EmailTemplateEnum } from "../../models/EmailTemplate";
+import fetch from "node-fetch";
 
 const { MAILGUN_API_URL, MAILGUN_API_KEY } = process.env;
 const MAILGUN_API_USERNAME = "api";
@@ -39,12 +39,13 @@ export class MailgunEmailService implements IEmailService {
     formData.append("subject", subject);
     formData.append("html", htmlBody);
 
-    const result = await axios.post(MAILGUN_API_URL!, {
+    const result = await fetch(MAILGUN_API_URL!, {
+      method: "POST",
       headers,
       body: formData,
     });
 
-    return result.status < 400;
+    return result.ok;
   };
 
   private replacePlaceholders = (
