@@ -4,21 +4,32 @@ import { OAuth2Client } from "google-auth-library";
 import { GoogleUserInfo } from "../services/types";
 import emailService from "../services/email";
 import { EmailTemplateEnum } from "../models/EmailTemplate";
+import { generateToken, verifyToken } from "./verifyToken";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
-
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await userService.getByEmailAndPassword(
-      req.body.email,
-      req.body.password,
-    );
+    const user = await userService.getByEmail(req.body.email);
     if (user === null) {
       res.status(400).json({
         message: "Check your password or email",
       });
       return;
     }
+    const userPayload = {
+      id: user._id?.toString(),
+      email: user.email.toString(),
+    };
+    const token = generateToken(userPayload, "2h");
+
+    await emailService.send({
+      templateType: EmailTemplateEnum.VerifyEmail,
+      to: req.body.email,
+      placeholders: {
+        firstName: `${user.fullName}`,
+        verifyURL: `https://maverva.hilalabaci.com/login/verify-email?token=${token}`,
+      },
+    });
     res.json(user);
   } catch (error) {
     res.status(500).json({

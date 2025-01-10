@@ -51,7 +51,7 @@ const router = Router();
 router.get("/", home);
 router.post("/register", createUser);
 router.get("/register", getAllUsers);
-router.post("/login", login);
+router.post("/login-verification-email", login);
 router.post("/login-google", loginGoogle);
 router.post("/project", createProject);
 router.get("/project", getProjects);

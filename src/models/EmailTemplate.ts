@@ -4,7 +4,7 @@ type ObjectId = mongoose.Types.ObjectId;
 
 export enum EmailTemplateEnum {
   Welcome = 1,
-  ResetPassword = 2,
+  VerifyEmail = 2,
 }
 
 export interface EmailTemplateType extends mongoose.Document<ObjectId> {
