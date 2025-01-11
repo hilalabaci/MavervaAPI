@@ -82,26 +82,19 @@ export const loginGoogle = async (
         email: googleUserInfo.email,
         fullName: `${googleUserInfo.given_name} ${googleUserInfo.family_name}`,
       });
+      await emailService.send({
+        templateType: EmailTemplateEnum.Welcome,
+        to: googleUserInfo.email,
+        placeholders: {
+          firstName: `${googleUserInfo.given_name} ${googleUserInfo.family_name}`,
+          loginURL: "",
+          setUpProfileURL: "",
+          startUpGuideURL: "",
+        },
+      });
     }
-    await emailService.send({
-      templateType: EmailTemplateEnum.Welcome,
-      to: googleUserInfo.email,
-      placeholders: {
-        firstName: `${googleUserInfo.given_name} ${googleUserInfo.family_name}`,
-        loginURL: "",
-        setUpProfileURL: "",
-        startUpGuideURL: "",
-      },
-    });
     res.status(200).json(user);
     return;
-    // if (user === null) {
-    //   res.status(400).json({
-    //     message: "Check your password or email",
-    //   });
-    //   return;
-    // }
-    // res.json(user);
   } catch (error) {
     console.log(error);
     res.status(500).json({
