@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import Backlog from "../models/Backlog";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export const getBacklog = async (
   req: Request,
@@ -10,37 +12,36 @@ export const getBacklog = async (
     res.status(400).json({ message: "Board Id and Project Key is required" });
     return;
   }
-
   try {
-    let backlog = await Backlog.findOne({ boardId }).populate({
-      path: "cardIds", // This is the field you want to populate
-      populate: [
-        {
-          path: "userId", // Populate the userId field in the Card
-          model: "User", // Specify the model name for userId
+    let backlog = await prisma.backlog.findUnique({
+      where: {
+        BoardId: boardId,
+      },
+      include: {
+        Issues: {
+          select: {
+            Id: true,
+            User: true,
+            Label: true,
+          },
         },
-        {
-          path: "labels", // Populate the labels field in the Card
-          model: "Label", // Specify the model name for labels
-        },
-      ],
+      },
     });
-
     if (backlog) {
-      res.json(backlog?.cardIds);
+      res.json(backlog?.Issues);
       return;
     }
 
-    backlog = new Backlog({
-      boardId: boardId,
-      cardIds: [],
-    });
-
-    await backlog.save();
-    res.json([]);
+    // backlog = new Backlog({
+    //   boardId: boardId,
+    //   cardIds: [],
+    // });
+    // res.json([]);
     return;
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "An error occurred while fetching cards" });
+    console.error("Error fetching backlog:", error);
+    res
+      .status(500)
+      .json({ message: "An error occurred while fetching backlog" });
   }
 };

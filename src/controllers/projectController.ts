@@ -1,40 +1,65 @@
 import { Request, Response } from "express";
-import Project from "../models/Project";
-import Board from "../models/Board";
-import User from "../models/User";
-import Card from "../models/Card";
+import { PrismaClient } from "@prisma/client";
 
+const prisma = new PrismaClient();
+//CREATE PROJECT OR PROJECT WITH BOARD
 export const createProject = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const { title, leadUser, projectKey, boardTitle } = req.body;
+  const { title, leadUser, projectKey, boardTitle, description } = req.body;
 
   try {
-    const newProject = new Project({
-      title: title,
-      leadUser: leadUser,
-      users: [leadUser], // Yeni panoya kullanıcı ekleniyor
-      projectKey: projectKey,
-      boards: [],
+    //creating new project
+    const newProject = await prisma.project.create({
+      data: {
+        Name: title, // Modelde 'Name' kullanılıyor
+        Key: projectKey,
+        Description: description,
+        LeadUserId: leadUser._id,
+        Users: { connect: { Id: leadUser.Id } }, // İlk kullanıcı projeyi ekliyoruz
+        UserProjects: {
+          create: [{ UserId: leadUser._id }],
+        },
+      },
     });
-    await newProject.save();
-    const board = new Board({
-      title: boardTitle || `${projectKey} board`,
-      users: [leadUser], // Yeni panoya kullanıcı ekleniyor
-      projectIds: [newProject._id],
+    //creating new board
+    const board = await prisma.board.create({
+      data: {
+        Name: boardTitle || `${projectKey} board`,
+        Key: `${projectKey}_board`,
+        LeadUserId: leadUser._id,
+        ProjectId: newProject.Id,
+        Users: { connect: { Id: leadUser._id } },
+      },
     });
-    await board.save();
 
-    newProject.boards = [board._id];
-    await newProject.save();
-
-    // Kullanıcının projeject dizisine panoyu ekleyin
-    const user = await User.findById(leadUser);
-    user?.projects.push(newProject._id);
-    await user?.save();
-
-    const projectToReturn = await newProject.populate("boards");
+    //connect project to board
+    await prisma.project.update({
+      where: { Id: newProject.Id },
+      data: {
+        Boards: {
+          connect: { Id: board.Id },
+        },
+      },
+    });
+    //add user to project
+    await prisma.user.update({
+      where: { Id: leadUser._id },
+      data: {
+        Projects: {
+          connect: { Id: newProject.Id },
+        },
+      },
+    });
+    // return data in Proje and board
+    const projectToReturn = await prisma.project.findUnique({
+      where: { Id: newProject.Id },
+      include: {
+        Boards: true,
+        Users: true,
+      },
+    });
     res.status(201).json({
       message: "Project created successfully",
       project: projectToReturn,
@@ -46,59 +71,129 @@ export const createProject = async (
     });
   }
 };
-
+//GET PROJECT
 export const getProjects = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const userId = req.query.userId;
+  const userId = req.query.userId as string;
   if (!userId) {
     res.status(400).json({ message: "User ID is required" });
     return;
   }
-  const projects = await Project.find({ users: userId })
-    .populate({
-      path: "users",
-      select: "-password", // Exclude the password field
-    })
-    .populate("boards")
-    .populate({ path: "leadUser", select: "-password -boards -projects" });
-  res.json(projects);
+  try {
+    const projects = await prisma.project.findMany({
+      where: {
+        Users: {
+          some: { Id: userId },
+        },
+      },
+      include: {
+        Users: {
+          select: { Password: false },
+        },
+        Boards: true,
+        LeadUser: {
+          select: { Password: false, Boards: false, Projects: false },
+        },
+      },
+    });
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({
+      message: "Error fetching projects",
+      error: (err as Error).message,
+    });
+  }
 };
+
+// const projects = await Project.find({ users: userId })
+//   .populate({
+//     path: "users",
+//     select: "-password", // Exclude the password field
+//   })
+//   .populate("boards")
+//   .populate({ path: "leadUser", select: "-password -boards -projects" });
+// res.json(projects);
+
+//UPDATE PROJECT TITLE
 export const updateProjectTitle = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const filter = { _id: req.body.id };
-  const update = { title: req.body.title };
-  const projectTitle = await Project.findOneAndUpdate(filter, update, {
-    new: true,
-  });
-  res.json(projectTitle?.toJSON());
+  const { id, title } = req.body;
+  try {
+    const projectTitle = await prisma.project.update({
+      where: { Id: id },
+      data: { Name: title },
+    });
+    res.json(projectTitle);
+  } catch (err) {
+    res.status(500).json({
+      message: "Error updating project title",
+      error: (err as Error).message,
+    });
+  }
+  //const filter = { _id: req.body.id };
+  //const update = { title: req.body.title };
+  // const projectTitle = await Project.findOneAndUpdate(filter, update, {
+  //   new: true,
+  // });
+  // res.json(projectTitle?.toJSON());
 };
+
+//DELETE PROJECT
 export const deleteProject = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   // Do: only project lead must be delete!
-  const id = req.query.id;
-  const filter = { projectId: id };
-  await Card.deleteMany(filter);
-  await Project.deleteOne({ _id: id });
-  res.sendStatus(200);
+  const { id } = req.query;
+  try {
+    const project = await prisma.project.findUnique({
+      where: { Id: id as string },
+      include: { LeadUser: true },
+    });
+    if (!project) {
+      res.status(404).json({ message: "Project not found" });
+      return;
+    }
+    if (project.LeadUserId !== id) {
+      res
+        .status(403)
+        .json({ message: "Only project lead can delete the project" });
+      return;
+    }
+    await prisma.issue.deleteMany({
+      where: { ProjectId: id },
+    });
+    await prisma.project.delete({
+      where: { Id: id },
+    });
+    res.sendStatus(200);
+  } catch (err) {
+    res.status(500).json({
+      message: "Error deleting project",
+      error: (err as Error).message,
+    });
+  }
 };
 
+//FIND PROJECT
 export const findProject = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   const { projectKey } = req.params;
   try {
-    const project = await Project.findOne({ projectKey }).populate({
-      path: "users",
-      select: "-password", // Parola alanını dışla
+    const project = await prisma.project.findUnique({
+      where: { Key: projectKey },
+      include: {
+        Users: {
+          select: { Password: false },
+        },
+      },
     });
-
     if (!project) {
       res.status(404).json({ message: "Project not found" });
       return;

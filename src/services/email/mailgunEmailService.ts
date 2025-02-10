@@ -1,7 +1,7 @@
+import { EmailTemplateEnum, PrismaClient } from "@prisma/client";
 import { EmailSendParams, IEmailService } from "./interfaces";
-import EmailTemplate, { EmailTemplateEnum } from "../../models/EmailTemplate";
 import fetch from "node-fetch";
-
+const prisma = new PrismaClient();
 const { MAILGUN_API_URL, MAILGUN_API_KEY } = process.env;
 const MAILGUN_API_USERNAME = "api";
 
@@ -10,17 +10,21 @@ export class MailgunEmailService implements IEmailService {
   send = async (params: EmailSendParams): Promise<boolean> => {
     if (!params || !params.to || !params.templateType) return false;
 
-    const template = await EmailTemplate.findOne({ type: params.templateType });
+    const template = await prisma.emailTemplate.findFirst({
+      where: {
+        Type: EmailTemplateEnum.VerifyEmail, // Enum değerini kullanıyoruz
+      },
+    });
 
     if (!template) return false;
 
     let subject = this.replacePlaceholders(
-      template.subject,
+      template.Subject,
       params.placeholders,
     );
 
     let htmlBody = this.replacePlaceholders(
-      template.htmlBody,
+      template.HtmlBody,
       params.placeholders,
     );
 
@@ -34,7 +38,7 @@ export class MailgunEmailService implements IEmailService {
     };
 
     const formData = new URLSearchParams(); //expecting form data not JSON
-    formData.append("from", template.from);
+    formData.append("from", template.From);
     formData.append("to", params.to);
     formData.append("subject", subject);
     formData.append("html", htmlBody);

@@ -1,7 +1,7 @@
 export interface RegisterUserInput {
   fullName: string;
   email: string;
-  password?: string;
+  password: string;
 }
 
 export interface GoogleUserInfo {
@@ -12,4 +12,8 @@ export interface GoogleUserInfo {
   given_name: string;
   family_name: string;
   picture: string;
+}
+export enum EmailTemplateEnum {
+  Welcome = 1,
+  VerifyEmail = 2,
 }

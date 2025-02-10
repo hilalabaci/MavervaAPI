@@ -1,14 +1,17 @@
 import { Request, Response } from "express";
-import Sprint from "../models/Sprint";
-import Board from "../models/Board";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export const addSprint = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, sprintGoal, startDate, endDate, boardId, userId } = req.body;
 
-    const findBoard = await Board.find({
-      _id: boardId,
-      users: { $in: userId },
+    const findBoard = await prisma.board.findMany({
+      where: {
+        Id: boardId,
+        Users: { some: { Id: userId } },
+      },
     });
     if (!findBoard) {
       res.status(400).json({
@@ -16,16 +19,17 @@ export const addSprint = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-    const newSprint = new Sprint({
-      name: name,
-      sprintGoal: sprintGoal,
-      startDate: startDate,
-      endDate: endDate,
-      boardId: boardId,
-      userId: userId,
+    const newSprint = await prisma.sprint.create({
+      data: {
+        Name: name,
+        SprintGoal: sprintGoal,
+        StartDate: startDate,
+        EndDate: endDate,
+        BoardId: boardId,
+        Users: { connect: { Id: userId } },
+      },
     });
 
-    await newSprint.save();
     res.status(201).json({
       message: "Sprint created successfully",
       newSprint,
@@ -49,14 +53,14 @@ export const getSprints = async (
   }
 
   try {
-    const sprints = await Sprint.find({ boardId }).populate({
-      path: "cardIds", // This is the field you want to populate
-      populate: [
-        {
-          path: "userId", // Populate the userId field in the Card
-          model: "User", // Specify the model name for userId
-        },
-      ],
+    const sprints = await prisma.sprint.findMany({
+      where: {
+        BoardId: boardId as string,
+      },
+      include: {
+        Issues: true,
+        Users: true,
+      },
     });
 
     res.json(sprints);
@@ -74,17 +78,21 @@ export const updateSprint = async (
   const boardId = req.body.boardId;
   try {
     // Update the selected sprint to active: true
-    const filter = { _id: sprintId };
-    const update = { active: true };
-    const updatedSprint = await Sprint.findOneAndUpdate(filter, update, {
-      new: true,
-    }).populate("cardIds");
+
+    const updatedSprint = await prisma.sprint.update({
+      where: { Id: sprintId },
+      data: { IsActive: true },
+      include: { Issues: true },
+    });
 
     // Set active: false for all other sprints
-    const updateInactiveSprints = await Sprint.updateMany(
-      { _id: { $ne: sprintId }, boardId: boardId }, // Filter to exclude the active sprint
-      { active: false },
-    );
+    const updateInactiveSprints = await prisma.sprint.updateMany({
+      where: {
+        Id: { not: sprintId },
+        BoardId: boardId,
+      },
+      data: { IsActive: false },
+    });
 
     res.status(200).json({
       message: "Sprint updated successfully",

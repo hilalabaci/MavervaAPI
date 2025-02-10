@@ -27,21 +27,21 @@ import {
   getColumn,
 } from "../controllers/columnController";
 import {
-  addCard,
+  addIssue,
   deleteCard,
   getCards,
   updateCard,
   updateCardContent,
-} from "../controllers/cardController";
-import {
-  addLabel,
-  deleteLabel,
-  getLabels,
-} from "../controllers/labelController";
-import {
-  getNotification,
-  markReadNotification,
-} from "../controllers/notificationController";
+} from "../controllers/issueController";
+// import {
+//   addLabel,
+//   deleteLabel,
+//   getLabels,
+// } from "../controllers/labelController";
+// import {
+//   getNotification,
+//   markReadNotification,
+// } from "../controllers/notificationController";
 import { home } from "../controllers/homeController";
 import { createProjectKey } from "../controllers/projectKeyController";
 
@@ -70,16 +70,16 @@ router.get("/projects/:projectKey/boards/:boardId", getActiveSprint);
 router.get("/column", getColumn);
 router.post("/column", addColumn);
 router.delete("/column", deleteColumn);
-router.post("/card", addCard);
+router.post("/card", addIssue);
 router.get("/card", getCards);
 router.put("/card", updateCard);
 router.delete("/card", deleteCard);
 router.put("/card/content", updateCardContent);
-router.post("/label", addLabel);
-router.get("/label", getLabels);
-router.delete("/label", deleteLabel);
-router.get("/notification", getNotification);
-router.post("/notification/mark-read", markReadNotification);
+//router.post("/label", addLabel);
+//router.get("/label", getLabels);
+//router.delete("/label", deleteLabel);
+//router.get("/notification", getNotification);
+//router.post("/notification/mark-read", markReadNotification);
 router.get("/createProjectKey", createProjectKey);
 
 export default router;

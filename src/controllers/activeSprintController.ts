@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import Sprint from "../models/Sprint";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export const getActiveSprint = async (
   req: Request,
@@ -12,33 +14,36 @@ export const getActiveSprint = async (
   }
 
   try {
-    let sprint = await Sprint.findOne({ active: true, boardId })
-      .populate({
-        path: "cardIds",
-        populate: [
-          {
-            path: "userId",
-            model: "User",
+    const sprint = await prisma.sprint.findFirst({
+      where: {
+        BoardId: boardId,
+        IsActive: true,
+      },
+      include: {
+        Issues: {
+          include: {
+            User: true,
+            Label: true,
           },
-          {
-            path: "labels",
-            model: "Label",
+        },
+        Board: {
+          select: {
+            Name: true,
           },
-        ],
-      })
-      .populate({
-        path: "boardId",
-        select: "title",
-      });
+        },
+      },
+    });
 
     if (sprint) {
       res.json(sprint);
       return;
     }
-    res.status(400).json({ message: "Board Id and Project Key is required" });
+    res.status(400).json({ message: "Active sprint not found" });
     return;
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "An error occurred while fetching cards" });
+    res
+      .status(500)
+      .json({ message: "An error occurred while fetching sprint" });
   }
 };

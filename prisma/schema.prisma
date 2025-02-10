@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  Id                    String         @id @default(uuid())
+  Email                 String         @unique
+  Password              String
+  FullName              String?
+  Issues                Issue[]
+  Projects              Project[]
+  Boards                Board[]
+  UserIssues            UserIssue[]
+  UserProjects          UserProject[]
+  sentNotifications     Notification[] @relation(name: "SentNotifications")
+  receivedNotifications Notification[] @relation(name: "ReceivedNotifications")
+  Notifications         Notification[]
+  ProjectLeadUsers      Project[]      @relation(name: "ProjectLeadUser")
+  UserBoard             UserBoard[]
+  Sprint                Sprint?        @relation(fields: [sprintId], references: [Id])
+  sprintId              String?
+}
+
+model Project {
+  Id           String        @id @default(uuid())
+  Name         String
+  Key          String        @unique
+  Description  String?
+  LeadUserId   String
+  CreatedAt    DateTime      @default(now())
+  Boards       Board[]
+  Issues       Issue[]
+  LeadUser     User          @relation("ProjectLeadUser", fields: [LeadUserId], references: [Id])
+  Users        User[]
+  UserProjects UserProject[]
+  UserBoard    UserBoard[]
+}
+
+model Board {
+  Id          String        @id @default(uuid())
+  Name        String
+  Key         String        @unique
+  ProjectId   String
+  LeadUserId  String
+  CreatedAt   DateTime      @default(now())
+  Backlog     Backlog?
+  Project     Project       @relation(fields: [ProjectId], references: [Id])
+  Columns     Column[]
+  Issues      Issue[]
+  Sprints     Sprint[]
+  Users       User[]
+  UserBoards  UserBoard[]
+  UserProject UserProject[]
+}
+
+model Backlog {
+  Id      String  @id @default(uuid())
+  BoardId String  @unique
+  Board   Board   @relation(fields: [BoardId], references: [Id])
+  Issues  Issue[]
+}
+
+model Sprint {
+  Id         String   @id @default(uuid())
+  Name       String
+  SprintGoal String?
+  BoardId    String
+  IsActive   Boolean  @default(false)
+  Issues     Issue[]
+  Board      Board    @relation(fields: [BoardId], references: [Id])
+  StartDate  DateTime @default(now())
+  EndDate    DateTime @default(now())
+  Users      User[]
+}
+
+model Column {
+  Id      String  @id @default(uuid())
+  Name    String
+  Status  Int
+  BoardId String
+  Board   Board   @relation(fields: [BoardId], references: [Id])
+  Issues  Issue[]
+}
+
+model Issue {
+  Id          String      @id @default(uuid())
+  Key         String      @unique
+  Summary     String
+  Description String?
+  Status      Int         @default(1)
+  Type        String      @default("Task")
+  CreatedAt   DateTime    @default(now())
+  ProjectId   String
+  UserId      String?
+  LabelId     String?
+  BoardId     String?
+  ColumnId    String
+  BacklogId   String?
+  SprintId    String?
+  Backlog     Backlog?    @relation(fields: [BacklogId], references: [Id])
+  Board       Board?      @relation(fields: [BoardId], references: [Id])
+  Column      Column      @relation(fields: [ColumnId], references: [Id])
+  Label       Label?      @relation(fields: [LabelId], references: [Id])
+  Project     Project     @relation(fields: [ProjectId], references: [Id])
+  Sprint      Sprint?     @relation(fields: [SprintId], references: [Id])
+  User        User?       @relation(fields: [UserId], references: [Id])
+  UserIssues  UserIssue[]
+  ProjectKey  String?
+}
+
+model Label {
+  Id     String  @id @default(uuid())
+  Name   String  @unique
+  Issues Issue[]
+}
+
+model UserProject {
+  UserId    String
+  ProjectId String
+  Project   Project @relation(fields: [ProjectId], references: [Id])
+  User      User    @relation(fields: [UserId], references: [Id])
+  Board     Board?  @relation(fields: [boardId], references: [Id])
+  boardId   String?
+
+  @@id([UserId, ProjectId])
+}
+
+model UserBoard {
+  UserId    String
+  BoardId   String
+  ProjectId String
+  Project   Project @relation(fields: [ProjectId], references: [Id])
+  Board     Board   @relation(fields: [BoardId], references: [Id])
+  User      User    @relation(fields: [UserId], references: [Id])
+
+  @@id([UserId, BoardId])
+}
+
+model UserIssue {
+  UserId  String
+  IssueId String
+  Issue   Issue  @relation(fields: [IssueId], references: [Id])
+  User    User   @relation(fields: [UserId], references: [Id])
+
+  @@id([UserId, IssueId])
+}
+
+model Notification {
+  Id         String   @id @default(uuid())
+  FromUser   User     @relation(name: "SentNotifications", fields: [FromUserId], references: [Id])
+  FromUserId String
+  ToUser     User     @relation(name: "ReceivedNotifications", fields: [ToUserId], references: [Id])
+  ToUserId   String
+  CreatedAt  DateTime @default(now())
+  message    String   @db.VarChar(128)
+  isRead     Boolean  @default(false)
+  User       User?    @relation(fields: [userId], references: [Id])
+  userId     String?
+}
+
+model EmailTemplate {
+  Id        String            @id @default(uuid())
+  From      String
+  Subject   String
+  HtmlBody  String
+  Type      EmailTemplateEnum
+  CreatedAt DateTime          @default(now())
+  UpdatedAt DateTime          @updatedAt
+}
+
+enum EmailTemplateEnum {
+  Welcome
+  VerifyEmail
+}

@@ -1,11 +1,15 @@
 import { Request, Response } from "express";
 import { userService } from "../services/userService";
-import emailService from "../services/email";
-import { EmailTemplateEnum } from "../models/EmailTemplate";
+import dotenv from "dotenv";
+dotenv.config();
 
 export const getAllUsers = async (_: Request, res: Response): Promise<void> => {
-  const all = await userService.getAll();
-  res.json(all);
+  try {
+    const all = await userService.getAll();
+    res.json(all);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
 };
 
 export const createUser = async (
@@ -14,25 +18,29 @@ export const createUser = async (
 ): Promise<void> => {
   try {
     const { fullName, email, password } = req.body;
+    if (!fullName || !email || !password) {
+      res.status(400).json({ error: "All fields are required" });
+      return;
+    }
 
-    if (!fullName) {
-      res.status(400).json({
-        fullName: "Name is required",
-      });
-      return;
-    }
-    if (!email) {
-      res.status(400).json({
-        email: "E-mail is required",
-      });
-      return;
-    }
-    if (!password) {
-      res.status(400).json({
-        password: "Password is required",
-      });
-      return;
-    }
+    // if (!fullName) {
+    //   res.status(400).json({
+    //     fullName: "Name is required",
+    //   });
+    //   return;
+    // }
+    // if (!email) {
+    //   res.status(400).json({
+    //     email: "E-mail is required",
+    //   });
+    //   return;
+    // }
+    // if (!password) {
+    //   res.status(400).json({
+    //     password: "Password is required",
+    //   });
+    //   return;
+    // }
 
     const userFound = await userService.getByEmail(email);
     if (userFound !== null) {

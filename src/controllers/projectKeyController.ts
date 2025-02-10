@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
-import Project from "../models/Project";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export const createProjectKey = async (
   req: Request,
@@ -33,8 +35,10 @@ export const createProjectKey = async (
     let uniqueKey = newProjectKey;
     let suffix = 1;
     while (!isKeyUnique) {
-      const existingProject = await Project.findOne({
-        projectKey: newProjectKey,
+      const existingProject = await prisma.project.findFirst({
+        where: {
+          Key: newProjectKey,
+        },
       });
       if (!existingProject) {
         isKeyUnique = true;

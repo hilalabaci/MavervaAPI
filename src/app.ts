@@ -1,11 +1,11 @@
 import express, { Application } from "express";
 import expressWs from "express-ws";
 import cors from "cors";
-import mongoose from "mongoose";
-import { config } from "./config";
+import { PrismaClient } from "@prisma/client";
 import apiRoutes from "./routes/apiRoutes";
 // import wsRoutes from "./routes/wsRoutes";
 
+const prisma = new PrismaClient();
 const wsInstance = expressWs(express());
 const app: Application = wsInstance.app;
 
@@ -21,10 +21,9 @@ app.use("/", apiRoutes);
 // const ws = wsRoutes();
 // app.use("/ws", ws);
 
-// MongoDB Connection
-mongoose
-  .connect(config.dbUri)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+prisma
+  .$connect()
+  .then(() => console.log("Connected to PostgreSQL"))
+  .catch((err) => console.error("PostgreSQL connection error:", err));
 
 export default app;

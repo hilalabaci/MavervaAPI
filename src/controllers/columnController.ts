@@ -1,13 +1,18 @@
-import { Request, response, Response } from "express";
-import { Column } from "../models/Column";
-import Board from "../models/Board";
-import Card from "../models/Card";
+import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export const getColumn = async (req: Request, res: Response): Promise<void> => {
   const boardId = req.query.boardId;
   try {
-    const column = await Column.find({ boardId }).populate("cardIds");
-    res.json(column);
+    const columns = await prisma.column.findMany({
+      where: {
+        BoardId: boardId as string,
+      },
+      include: { Issues: true },
+    });
+    res.json(columns);
   } catch (error) {
     console.error(error);
     res
@@ -19,7 +24,11 @@ export const addColumn = async (req: Request, res: Response): Promise<void> => {
   try {
     const { title, boardId } = req.body;
 
-    const board = await Board.findById(boardId);
+    const board = await prisma.board.findUnique({
+      where: {
+        Id: boardId,
+      },
+    });
 
     if (!board) {
       res.status(400).json({
@@ -28,23 +37,26 @@ export const addColumn = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const columns = await Column.find({ boardId: boardId });
+    const columns = await prisma.column.findMany({
+      where: { BoardId: boardId },
+    });
     const highestStatusColumn = columns
-      .filter((c) => c.status !== 99)
-      .sort((a, b) => b.status - a.status)[0];
+      .filter((c) => c.Status !== 99)
+      .sort((a, b) => b.Status - a.Status)[0];
 
     // Determine the new status number
     const newStatusNumber = highestStatusColumn
-      ? highestStatusColumn.status + 1
+      ? highestStatusColumn.Status + 1
       : 0;
 
-    const newColumn = new Column({
-      title: title,
-      status: newStatusNumber,
-      boardId: boardId,
+    const newColumn = await prisma.column.create({
+      data: {
+        Name: title,
+        Status: newStatusNumber,
+        BoardId: boardId,
+      },
     });
 
-    await newColumn.save();
     res.status(201).json(newColumn);
   } catch (err) {
     res.status(500).json({
@@ -59,29 +71,28 @@ export const deleteColumn = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const columnId = req.query.columnId;
-    const findColumn = await Column.findById(columnId);
-    if (!findColumn) {
+    const columnId = req.query.columnId as string;
+
+    const column = await prisma.column.findUnique({
+      where: { Id: columnId },
+    });
+
+    if (!column) {
       res.status(404).send("Column not found");
       return;
     }
-    const columnStatus = findColumn?.status;
-    const boardId = findColumn.boardId;
-    const findColumnCards = await Card.find({
-      status: columnStatus,
-      boardId: boardId,
+    const columnStatus = column?.Status;
+    const boardId = column.BoardId;
+
+    const updatedCards = await prisma.issue.updateMany({
+      where: { Status: columnStatus, BoardId: boardId },
+      data: { Status: 0 },
     });
-    const updateResult = await Card.updateMany(
-      { _id: { $in: findColumnCards } },
-      { status: 0 },
-    );
-    if (updateResult.modifiedCount === 0) {
-      console.log("No cards were updated.");
-    } else {
-      console.log(`${updateResult.modifiedCount} cards updated.`);
-    }
-    await Column.deleteOne({ _id: columnId });
-    res.status(200).send(findColumnCards);
+    await prisma.column.delete({ where: { Id: columnId } });
+    res
+      .status(200)
+      .json({ message: "Column deleted", updatedCards })
+      .send(updatedCards);
   } catch (error) {
     console.error("Error deleting column:", error);
     res.status(500).send("Internal server error");
