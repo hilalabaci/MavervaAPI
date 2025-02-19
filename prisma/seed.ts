@@ -1,40 +1,40 @@
-import { PrismaClient } from "@prisma/client";
+// import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
-async function main() {
-  const project = await prisma.project.create({
-    data: {
-      name: "Maverva Project",
-      boards: {
-        create: [
-          {
-            name: "Scrum Board",
-            backlog: { create: {} }, // Board için bir backlog oluştur
-            sprints: {
-              create: [
-                { name: "Sprint 1", isActive: true }, // Aktif sprint
-                { name: "Sprint 2", isActive: false }, // Gelecek sprint
-              ],
-            },
-            columns: {
-              create: [
-                { name: "To Do" },
-                { name: "In Progress" },
-                { name: "Done" },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  });
+// async function main() {
+//   const project = await prisma.project.create({
+//     data: {
+//       Name: "Maverva Project",
+//       Boards: {
+//         create: [
+//           {
+//             Name: "Scrum Board",
+//             Key: "unique-key", // Pass Key here for the Board
+//             LeadUserId: "lead-user-id", // Pass LeadUserId here for the Board
+//             Backlog: { create: {} }, // Create a backlog for the board
+//             Sprints: {
+//               create: [
+//                 { Name: "Sprint 1", IsActive: true },
+//                 { Name: "Sprint 2", IsActive: false },
+//               ],
+//             },
+//             Columns: {
+//               create: [
+//                 { Name: "To Do", Status: 1 },
+//                 { Name: "In Progress", Status: 2 },
+//                 { Name: "Done", Status: 99 },
+//               ],
+//             },
+//           },
+//         ],
+//       },
+//     },
+//   });
+// }
 
-  console.log("Project and Scrum Board initialized:", project);
-}
-
-main()
-  .catch((e) => console.error(e))
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// main()
+//   .catch((e) => console.error(e))
+//   .finally(async () => {
+//     await prisma.$disconnect();
+//   });

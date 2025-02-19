@@ -31,6 +31,12 @@ export const userService = {
       where: { Email: email, Password: password },
     });
   },
+  updateProfilePicture: async (userId: string, profilePicture: string) => {
+    return await prisma.user.update({
+      where: { Id: userId },
+      data: { profilePicture },
+    });
+  },
   // register: async (data: RegisterUserInput): Promise<IUser | null> => {
   //   const user = new User({
   //     fullName: data.fullName,
@@ -43,6 +49,7 @@ export const userService = {
         FullName: data.fullName,
         Email: data.email,
         Password: data.password,
+        profilePicture: data.profilePicture,
       },
     });
     // await user.save();

@@ -10,7 +10,7 @@ datasource db {
 model User {
   Id                    String         @id @default(uuid())
   Email                 String         @unique
-  Password              String
+  Password              String?
   FullName              String?
   Issues                Issue[]
   Projects              Project[]
@@ -24,6 +24,7 @@ model User {
   UserBoard             UserBoard[]
   Sprint                Sprint?        @relation(fields: [sprintId], references: [Id])
   sprintId              String?
+  profilePicture        String?
 }
 
 model Project {

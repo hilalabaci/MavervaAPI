@@ -2,6 +2,7 @@ export interface RegisterUserInput {
   fullName: string;
   email: string;
   password: string;
+  profilePicture?: string;
 }
 
 export interface GoogleUserInfo {

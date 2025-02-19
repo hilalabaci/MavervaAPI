@@ -9,28 +9,38 @@ export const createProject = async (
 ): Promise<void> => {
   const { title, leadUser, projectKey, boardTitle, description } = req.body;
 
+  if (!leadUser || !leadUser.Id) {
+    res.status(400).json({
+      message: "Lead user is required and should have a valid ID",
+    });
+    return;
+  }
+
   try {
     //creating new project
     const newProject = await prisma.project.create({
       data: {
         Name: title, // Modelde 'Name' kullanılıyor
         Key: projectKey,
-        Description: description,
-        LeadUserId: leadUser._id,
+        Description: description || "",
         Users: { connect: { Id: leadUser.Id } }, // İlk kullanıcı projeyi ekliyoruz
         UserProjects: {
-          create: [{ UserId: leadUser._id }],
+          create: [{ UserId: leadUser.Id }],
+        },
+        LeadUser: {
+          connect: { Id: leadUser.Id }, // Connect the existing lead user
         },
       },
     });
     //creating new board
+
     const board = await prisma.board.create({
       data: {
         Name: boardTitle || `${projectKey} board`,
         Key: `${projectKey}_board`,
-        LeadUserId: leadUser._id,
+        LeadUserId: leadUser.Id,
         ProjectId: newProject.Id,
-        Users: { connect: { Id: leadUser._id } },
+        Users: { connect: { Id: leadUser.Id } },
       },
     });
 
@@ -45,7 +55,7 @@ export const createProject = async (
     });
     //add user to project
     await prisma.user.update({
-      where: { Id: leadUser._id },
+      where: { Id: leadUser.Id },
       data: {
         Projects: {
           connect: { Id: newProject.Id },
@@ -90,11 +100,19 @@ export const getProjects = async (
       },
       include: {
         Users: {
-          select: { Password: false },
+          select: { Id: true, Email: true, FullName: true },
         },
         Boards: true,
         LeadUser: {
-          select: { Password: false, Boards: false, Projects: false },
+          select: {
+            Id: true,
+            Email: true,
+            FullName: true,
+            Password: false,
+            Boards: true,
+            Projects: true,
+            profilePicture: true,
+          },
         },
       },
     });
@@ -148,29 +166,40 @@ export const deleteProject = async (
   res: Response,
 ): Promise<void> => {
   // Do: only project lead must be delete!
-  const { id } = req.query;
+  const { projectId, userId } = req.query;
   try {
     const project = await prisma.project.findUnique({
-      where: { Id: id as string },
+      where: { Id: projectId as string },
       include: { LeadUser: true },
     });
+
     if (!project) {
       res.status(404).json({ message: "Project not found" });
       return;
     }
-    if (project.LeadUserId !== id) {
+
+    if (project.LeadUserId !== userId) {
       res
         .status(403)
         .json({ message: "Only project lead can delete the project" });
       return;
     }
+
     await prisma.issue.deleteMany({
-      where: { ProjectId: id },
+      where: { ProjectId: projectId as string },
+    });
+    await prisma.board.deleteMany({
+      where: { ProjectId: projectId as string },
+    });
+    await prisma.userProject.deleteMany({
+      where: { ProjectId: projectId as string },
     });
     await prisma.project.delete({
-      where: { Id: id },
+      where: { Id: projectId as string },
     });
-    res.sendStatus(200);
+    res.sendStatus(200).json({
+      message: "Successfully deleted",
+    });
   } catch (err) {
     res.status(500).json({
       message: "Error deleting project",

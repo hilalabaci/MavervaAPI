@@ -81,6 +81,7 @@ export const loginGoogle = async (
         email: googleUserInfo.email,
         fullName: `${googleUserInfo.given_name} ${googleUserInfo.family_name}`,
         password: "",
+        profilePicture: googleUserInfo.picture,
       });
       await emailService.send({
         templateType: EmailTemplateEnum.Welcome,
@@ -93,10 +94,15 @@ export const loginGoogle = async (
         },
       });
     }
+    if (
+      googleUserInfo.picture &&
+      user.profilePicture !== googleUserInfo.picture
+    ) {
+      await userService.updateProfilePicture(user.Id, googleUserInfo.picture);
+    }
     res.status(200).json(user);
     return;
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "Check your password or email",
     });
