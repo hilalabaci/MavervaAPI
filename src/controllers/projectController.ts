@@ -20,20 +20,20 @@ export const createProject = async (
     //creating new project
     const newProject = await prisma.project.create({
       data: {
-        Name: title, // Modelde 'Name' kullanılıyor
+        Name: title,
         Key: projectKey,
         Description: description || "",
-        Users: { connect: { Id: leadUser.Id } }, // İlk kullanıcı projeyi ekliyoruz
+        Users: { connect: { Id: leadUser.Id } },
         UserProjects: {
           create: [{ UserId: leadUser.Id }],
         },
         LeadUser: {
-          connect: { Id: leadUser.Id }, // Connect the existing lead user
+          connect: { Id: leadUser.Id },
         },
       },
     });
-    //creating new board
 
+    //creating new board
     const board = await prisma.board.create({
       data: {
         Name: boardTitle || `${projectKey} board`,
@@ -43,7 +43,10 @@ export const createProject = async (
         Users: { connect: { Id: leadUser.Id } },
       },
     });
-
+    await prisma.user.update({
+      where: { Id: leadUser.Id },
+      data: { Role: "Admin" },
+    });
     //connect project to board
     await prisma.project.update({
       where: { Id: newProject.Id },
@@ -100,7 +103,7 @@ export const getProjects = async (
       },
       include: {
         Users: {
-          select: { Id: true, Email: true, FullName: true },
+          select: { Id: true, Email: true, FullName: true, Role: true },
         },
         Boards: true,
         LeadUser: {
@@ -111,7 +114,7 @@ export const getProjects = async (
             Password: false,
             Boards: true,
             Projects: true,
-            profilePicture: true,
+            ProfilePicture: true,
           },
         },
       },
@@ -219,7 +222,13 @@ export const findProject = async (
       where: { Key: projectKey },
       include: {
         Users: {
-          select: { Password: false },
+          select: {
+            Id: true,
+            Email: true,
+            FullName: true,
+            ProfilePicture: true,
+            Password: false,
+          },
         },
       },
     });

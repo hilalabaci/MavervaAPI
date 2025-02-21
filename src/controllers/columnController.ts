@@ -22,7 +22,18 @@ export const getColumn = async (req: Request, res: Response): Promise<void> => {
 };
 export const addColumn = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { title, boardId } = req.body;
+    const { title, boardId, userId } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { Id: req.body.userId },
+      select: { Role: true },
+    });
+    if (user?.Role !== "Admin") {
+      res
+        .status(403)
+        .json({ message: "You do not have permission to add columns" });
+      return;
+    }
 
     const board = await prisma.board.findUnique({
       where: {
@@ -71,10 +82,20 @@ export const deleteColumn = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const columnId = req.query.columnId as string;
+    const { columnId, userId } = req.query;
+    const user = await prisma.user.findUnique({
+      where: { Id: req.body.userId },
+      select: { Role: true },
+    });
+    if (user?.Role !== "Admin") {
+      res
+        .status(403)
+        .json({ message: "You do not have permission to delete columns" });
+      return;
+    }
 
     const column = await prisma.column.findUnique({
-      where: { Id: columnId },
+      where: { Id: columnId as string },
     });
 
     if (!column) {
@@ -88,7 +109,7 @@ export const deleteColumn = async (
       where: { Status: columnStatus, BoardId: boardId },
       data: { Status: 0 },
     });
-    await prisma.column.delete({ where: { Id: columnId } });
+    await prisma.column.delete({ where: { Id: columnId as string } });
     res
       .status(200)
       .json({ message: "Column deleted", updatedCards })

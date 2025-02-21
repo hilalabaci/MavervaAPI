@@ -17,14 +17,15 @@ model User {
   Boards                Board[]
   UserIssues            UserIssue[]
   UserProjects          UserProject[]
-  sentNotifications     Notification[] @relation(name: "SentNotifications")
-  receivedNotifications Notification[] @relation(name: "ReceivedNotifications")
+  SentNotifications     Notification[] @relation(name: "SentNotifications")
+  ReceivedNotifications Notification[] @relation(name: "ReceivedNotifications")
   Notifications         Notification[]
   ProjectLeadUsers      Project[]      @relation(name: "ProjectLeadUser")
   UserBoard             UserBoard[]
-  Sprint                Sprint?        @relation(fields: [sprintId], references: [Id])
-  sprintId              String?
-  profilePicture        String?
+  Sprint                Sprint?        @relation(fields: [SprintId], references: [Id])
+  SprintId              String?
+  ProfilePicture        String?
+  Role                  String         @default("member")
 }
 
 model Project {
@@ -123,10 +124,11 @@ model Label {
 model UserProject {
   UserId    String
   ProjectId String
-  Project   Project @relation(fields: [ProjectId], references: [Id])
-  User      User    @relation(fields: [UserId], references: [Id])
-  Board     Board?  @relation(fields: [boardId], references: [Id])
+  Project   Project  @relation(fields: [ProjectId], references: [Id])
+  User      User     @relation(fields: [UserId], references: [Id])
+  Board     Board?   @relation(fields: [boardId], references: [Id])
   boardId   String?
+  Role      UserRole @default(Viewer)
 
   @@id([UserId, ProjectId])
 }
@@ -135,9 +137,10 @@ model UserBoard {
   UserId    String
   BoardId   String
   ProjectId String
-  Project   Project @relation(fields: [ProjectId], references: [Id])
-  Board     Board   @relation(fields: [BoardId], references: [Id])
-  User      User    @relation(fields: [UserId], references: [Id])
+  Project   Project  @relation(fields: [ProjectId], references: [Id])
+  Board     Board    @relation(fields: [BoardId], references: [Id])
+  User      User     @relation(fields: [UserId], references: [Id])
+  Role      UserRole @default(Viewer)
 
   @@id([UserId, BoardId])
 }
@@ -158,10 +161,10 @@ model Notification {
   ToUser     User     @relation(name: "ReceivedNotifications", fields: [ToUserId], references: [Id])
   ToUserId   String
   CreatedAt  DateTime @default(now())
-  message    String   @db.VarChar(128)
-  isRead     Boolean  @default(false)
-  User       User?    @relation(fields: [userId], references: [Id])
-  userId     String?
+  Message    String   @db.VarChar(128)
+  IsRead     Boolean  @default(false)
+  User       User?    @relation(fields: [UserId], references: [Id])
+  UserId     String?
 }
 
 model EmailTemplate {
@@ -177,4 +180,10 @@ model EmailTemplate {
 enum EmailTemplateEnum {
   Welcome
   VerifyEmail
+}
+
+enum UserRole {
+  Admin
+  Member
+  Viewer
 }

@@ -12,7 +12,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     if (user === null) {
       res.status(400).json({
         message: "Check your password or email",
-      });
+      }); 
       return;
     }
     const userPayload = {
@@ -96,13 +96,14 @@ export const loginGoogle = async (
     }
     if (
       googleUserInfo.picture &&
-      user.profilePicture !== googleUserInfo.picture
+      user.ProfilePicture !== googleUserInfo.picture
     ) {
       await userService.updateProfilePicture(user.Id, googleUserInfo.picture);
     }
     res.status(200).json(user);
     return;
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       message: "Check your password or email",
     });

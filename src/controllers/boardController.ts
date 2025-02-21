@@ -17,10 +17,22 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
 
     if (!projects.length) {
       res.status(400).json({
-        message: "Projects not found",
+        message:
+          "Projects not found or user does not have access to the project",
       });
       return;
     }
+    const user = await prisma.user.findUnique({
+      where: { Id: userId },
+      select: { Role: true },
+    });
+    if (user?.Role !== "Admin") {
+      res.status(403).json({
+        message: "You do not have permission to add a board",
+      });
+      return;
+    }
+
     const newBoard = await prisma.board.create({
       data: {
         Name: title,
@@ -78,6 +90,23 @@ export const getBoards = async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ message: "Project not found" });
       return;
     }
+    // Check if the user has a valid role
+    const user = await prisma.user.findUnique({
+      where: { Id: userId },
+      select: { Role: true },
+    });
+
+    if (
+      user?.Role !== "Admin" &&
+      user?.Role !== "Member" &&
+      user?.Role !== "Viewer"
+    ) {
+      res
+        .status(403)
+        .json({ message: "You do not have permission to view boards" });
+      return;
+    }
+
     const boards = await prisma.board.findMany({
       where: {
         Users: { some: { Id: userId } },
@@ -102,7 +131,7 @@ export const addUserToBoard = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { projectId, boardIds, email } = req.body;
+    const { projectId, boardIds, email, userId } = req.body;
 
     const user = await prisma.user.findUnique({ where: { Email: email } });
     if (!user) {
@@ -121,6 +150,19 @@ export const addUserToBoard = async (
       });
       return;
     }
+    // Check if the current user has the right role (Admin)
+    const currentUser = await prisma.user.findUnique({
+      where: { Id: req.body.userId },
+      select: { Role: true },
+    });
+
+    if (currentUser?.Role !== "Admin") {
+      res.status(403).json({
+        message: "You do not have permission to add users to boards",
+      });
+      return;
+    }
+
     // Check if the boards exist.
     const boards = await prisma.board.findMany({
       where: { Id: { in: boardIds } },

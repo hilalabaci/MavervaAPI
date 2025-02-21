@@ -31,10 +31,10 @@ export const userService = {
       where: { Email: email, Password: password },
     });
   },
-  updateProfilePicture: async (userId: string, profilePicture: string) => {
+  updateProfilePicture: async (userId: string, ProfilePicture: string) => {
     return await prisma.user.update({
       where: { Id: userId },
-      data: { profilePicture },
+      data: { ProfilePicture },
     });
   },
   // register: async (data: RegisterUserInput): Promise<IUser | null> => {
@@ -49,7 +49,7 @@ export const userService = {
         FullName: data.fullName,
         Email: data.email,
         Password: data.password,
-        profilePicture: data.profilePicture,
+        ProfilePicture: data.profilePicture,
       },
     });
     // await user.save();
