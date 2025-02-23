@@ -52,6 +52,15 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
         { Name: "Done", Status: 99, BoardId: newBoard.Id },
       ],
     });
+    await prisma.sprint.create({
+      data: {
+        Name: `${projectKeys[0]} Sprint 1`,
+        BoardId: newBoard.Id,
+        IsActive: false,
+        StartDate: new Date(),
+        EndDate: new Date(new Date().setDate(new Date().getDate() + 14)), // Sprint ends in 2 weeks
+      },
+    });
     res.status(201).json({ message: "Board created successfully", newBoard });
     // const user = await User.findById(userId);
     // user?.boards.push(newBoard._id);

@@ -40,7 +40,6 @@ model Project {
   LeadUser     User          @relation("ProjectLeadUser", fields: [LeadUserId], references: [Id])
   Users        User[]
   UserProjects UserProject[]
-  UserBoard    UserBoard[]
 }
 
 model Board {
@@ -137,7 +136,6 @@ model UserBoard {
   UserId    String
   BoardId   String
   ProjectId String
-  Project   Project  @relation(fields: [ProjectId], references: [Id])
   Board     Board    @relation(fields: [BoardId], references: [Id])
   User      User     @relation(fields: [UserId], references: [Id])
   Role      UserRole @default(Viewer)

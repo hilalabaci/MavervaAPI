@@ -58,7 +58,17 @@ export const getSprints = async (
         BoardId: boardId as string,
       },
       include: {
-        Issues: true,
+        Issues: {
+          include: {
+            Backlog: true,
+            Board: true,
+            Column: true,
+            Label: true,
+            Sprint: true,
+            User: true,
+            UserIssues: true,
+          },
+        },
         Users: true,
       },
     });

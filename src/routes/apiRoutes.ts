@@ -4,7 +4,7 @@ import { login, loginGoogle } from "../controllers/authController";
 import {
   createProject,
   deleteProject,
-  findProject,
+  getSelectedProject,
   getProjects,
   updateProjectTitle,
 } from "../controllers/projectController";
@@ -58,7 +58,7 @@ router.get("/project", getProjects);
 router.patch("/project", updateProjectTitle);
 router.delete("/project", deleteProject);
 router.post("/project/boards/add-user", addUserToBoard);
-router.get("/projects/:projectKey", findProject);
+router.get("/projects/:projectKey", getSelectedProject);
 router.post("/board", addBoard);
 router.get("/board", getBoards);
 router.get("/board/users", getUserstoBoard);
