@@ -120,7 +120,6 @@ export const getCards = async (req: Request, res: Response): Promise<void> => {
     res.status(400).json({ message: "BoardId is required" });
     return;
   }
-  console.log("here for boardId:", boardId);
   try {
     const issues = await prisma.issue.findMany({
       where: { BoardId: boardId as string },

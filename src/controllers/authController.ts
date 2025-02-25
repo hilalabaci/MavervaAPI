@@ -1,18 +1,19 @@
 import { Request, Response } from "express";
 import { userService } from "../services/userService";
 import { OAuth2Client } from "google-auth-library";
-import { EmailTemplateEnum, GoogleUserInfo } from "../services/types";
+import { EmailTemplateEnum } from "../services/types";
 import emailService from "../services/email";
-import { generateToken, verifyToken } from "./verifyToken";
+import { generateToken } from "./verifyToken";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = await userService.getByEmail(req.body.email);
+    let user = await userService.getByEmail(req.body.email);
+
     if (user === null) {
       res.status(400).json({
         message: "Check your password or email",
-      }); 
+      });
       return;
     }
     const userPayload = {
@@ -32,7 +33,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     res.json(user);
   } catch (error) {
     res.status(500).json({
-      message: "Check your password or email",
+      message: "",
     });
   }
 };
@@ -52,9 +53,14 @@ export const loginGoogle = async (
     }
     const accessToken = authorization.split(" ")[1];
     const client = new OAuth2Client({ clientId: GOOGLE_OAUTH_CLIENTID });
-    const info = await client.getTokenInfo(accessToken);
+    const verifyResult = await client.verifyIdToken({
+      idToken: accessToken,
+      audience: GOOGLE_OAUTH_CLIENTID,
+    });
 
-    if (!info?.email_verified) {
+    const payload = verifyResult.getPayload();
+
+    if (!payload?.email_verified || !payload.email) {
       res.status(401).json({
         message: "Auth failed 2",
       });
@@ -62,43 +68,28 @@ export const loginGoogle = async (
       return;
     }
 
-    const response = await fetch(
-      "https://www.googleapis.com/oauth2/v2/userinfo",
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
-    );
-
-    const googleUserInfo: GoogleUserInfo = await response.json();
-
-    let user = await userService.getByEmail(googleUserInfo.email);
+    let user = await userService.getByEmail(payload.email);
 
     if (!user) {
       user = await userService.register({
-        email: googleUserInfo.email,
-        fullName: `${googleUserInfo.given_name} ${googleUserInfo.family_name}`,
+        email: payload.email,
+        fullName: payload.name ?? "",
         password: "",
-        profilePicture: googleUserInfo.picture,
+        profilePicture: payload.picture,
       });
       await emailService.send({
         templateType: EmailTemplateEnum.Welcome,
-        to: googleUserInfo.email,
+        to: payload.email,
         placeholders: {
-          firstName: `${googleUserInfo.given_name} ${googleUserInfo.family_name}`,
+          firstName: payload.name ?? "",
           loginURL: "",
           setUpProfileURL: "",
           startUpGuideURL: "",
         },
       });
     }
-    if (
-      googleUserInfo.picture &&
-      user.ProfilePicture !== googleUserInfo.picture
-    ) {
-      await userService.updateProfilePicture(user.Id, googleUserInfo.picture);
+    if (payload.picture && user.ProfilePicture !== payload.picture) {
+      await userService.updateProfilePicture(user.Id, payload.picture);
     }
     res.status(200).json(user);
     return;

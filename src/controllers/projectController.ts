@@ -306,7 +306,6 @@ export const getSelectedProject = async (
         },
       },
     });
-    console.log(project?.Boards[0].Name);
     if (!project) {
       res.status(404).json({ message: "Project not found" });
       return;
