@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { Console } from "console";
 
 const prisma = new PrismaClient();
 
 export const addIssue = async (req: Request, res: Response): Promise<void> => {
   try {
     const { content, projectKey, status, userId, boardId, sprintId } = req.body;
-
     const project = await prisma.project.findFirst({
       where: {
         Key: projectKey,
@@ -29,6 +29,7 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
         Key: true,
       },
     });
+
     let issueKeyNumber = 1; // Varsayılan değer
     if (existingIssues.length > 0) {
       // Mevcut issue'ların Key'lerini al
@@ -41,6 +42,50 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
       issueKeyNumber = Math.max(...issueNumbers) + 1; // En büyük numaraya 1 ekle
     }
     const cardKey = `${projectKey}-${issueKeyNumber}`;
+
+    if (!sprintId) {
+      const newIssue = await prisma.issue.create({
+        data: {
+          Summary: content,
+          ProjectKey: projectKey,
+          Status: status,
+          Key: cardKey,
+          Board: {
+            connect: { Id: boardId },
+          },
+          Project: {
+            connect: { Id: project.Id },
+          },
+          User: {
+            connect: {
+              Id: userId,
+            },
+          },
+        },
+        include: {
+          User: true,
+        },
+      });
+      const backlog = await prisma.backlog.findFirst({
+        where: { BoardId: boardId },
+      });
+      if (!backlog) {
+        res
+          .status(400)
+          .json({ message: "Backlog not found for the given board" });
+        return;
+      }
+      await prisma.backlog.update({
+        where: { Id: backlog.Id },
+        data: {
+          Issues: {
+            connect: { Id: newIssue.Id },
+          },
+        },
+      });
+      res.json(newIssue);
+      return;
+    }
 
     const columnStatus = await prisma.column.findFirst({
       where: {
@@ -55,10 +100,6 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
         .json({ message: "Column not found for the given board and status" });
       return;
     }
-
-    // const cardKeyNumber = getRandomNumber(1, 100000);
-    // const cardKey = `${projectKey}-${cardKeyNumber}`;
-
     const newIssue = await prisma.issue
       .create({
         data: {
@@ -81,23 +122,17 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
             },
           },
         },
+        include: {
+          User: true,
+        },
       })
       .catch((err) => {
         console.error("Error creating issue:", err);
-        throw err; // or handle the error in some way
+        throw err;
       });
     if (sprintId) {
       await prisma.sprint.update({
         where: { Id: sprintId },
-        data: {
-          Issues: {
-            connect: { Id: newIssue.Id },
-          },
-        },
-      });
-    } else {
-      await prisma.backlog.update({
-        where: { Id: boardId },
         data: {
           Issues: {
             connect: { Id: newIssue.Id },
@@ -163,49 +198,64 @@ export const updateCard = async (
   try {
     const { oldSprintId, newSprintId, cardId, boardId, status } = req.body;
 
-    const updatedIssue = await prisma.issue.update({
-      where: { Id: cardId },
-      data: { Status: status },
-    });
+    // First, handle the case where only the status is being updated
+    if (status && !oldSprintId && !newSprintId) {
+      const updatedIssue = await prisma.issue.update({
+        where: { Id: cardId },
+        data: { Status: Number(status) },
+      });
+      res.json(updatedIssue);
+      return;
+    }
 
-    /****** Sprint to Backlog ******/
-    if (!newSprintId) {
+    // If both sprint IDs are provided, handle the case where the card moves from one sprint to another
+    if (newSprintId && oldSprintId) {
+      // Move the issue from the old sprint to the new sprint
+      await prisma.sprint.update({
+        where: { Id: newSprintId },
+        data: { Issues: { connect: { Id: cardId } } },
+      });
+      await prisma.sprint.update({
+        where: { Id: oldSprintId },
+        data: { Issues: { disconnect: { Id: cardId } } },
+      });
+    }
+
+    // If there's only an old sprint ID, move the card from the sprint to the backlog
+    if (!newSprintId && oldSprintId) {
+      await prisma.sprint.update({
+        where: { Id: oldSprintId },
+        data: { Issues: { disconnect: { Id: cardId } } },
+      });
       await prisma.backlog.update({
         where: { BoardId: boardId },
         data: { Issues: { connect: { Id: cardId } } },
       });
-
-      if (oldSprintId) {
-        await prisma.sprint.update({
-          where: { Id: oldSprintId },
-          data: { Issues: { disconnect: { Id: cardId } } },
-        });
-      }
-      /****** Backlog to Sprint ******/
-      if (newSprintId && !oldSprintId) {
-        await prisma.sprint.update({
-          where: { Id: newSprintId },
-          data: { Issues: { connect: { Id: cardId } } },
-        });
-        await prisma.backlog.update({
-          where: { BoardId: boardId },
-          data: { Issues: { disconnect: { Id: cardId } } },
-        });
-      }
-      /****** Sprint to Sprint ******/
-      if (newSprintId && oldSprintId) {
-        await prisma.sprint.update({
-          where: { Id: newSprintId },
-          data: { Issues: { connect: { Id: cardId } } },
-        });
-        await prisma.sprint.update({
-          where: { Id: oldSprintId },
-          data: { Issues: { disconnect: { Id: cardId } } },
-        });
-      }
-      res.json(updatedIssue);
     }
+
+    // If there's only a new sprint ID, move the card from the backlog to the sprint
+    if (newSprintId && !oldSprintId) {
+      await prisma.sprint.update({
+        where: { Id: newSprintId },
+        data: { Issues: { connect: { Id: cardId } } },
+      });
+      await prisma.backlog.update({
+        where: { BoardId: boardId },
+        data: { Issues: { disconnect: { Id: cardId } } },
+      });
+    }
+
+    // Finally, update the status of the card after all the moves
+    const updatedIssue = await prisma.issue.update({
+      where: { Id: cardId },
+      data: { Status: Number(status) },
+    });
+
+    // Send the updated issue as the response after all operations are completed
+    res.json(updatedIssue);
+    return;
   } catch (error) {
+    // If there's an error during any of the operations, send an error response
     res.status(500).json({ message: "Error updating card", error });
   }
 };

@@ -51,7 +51,6 @@ export const createProject = async (
         },
       },
     });
-
     await prisma.sprint.create({
       data: {
         Name: `${projectKey} Sprint 1`,
@@ -79,6 +78,11 @@ export const createProject = async (
           BoardId: board.Id,
         },
       ],
+    });
+    await prisma.backlog.create({
+      data: {
+        BoardId: board.Id,
+      },
     });
 
     await prisma.user.update({
@@ -198,20 +202,12 @@ export const updateProjectTitle = async (
       error: (err as Error).message,
     });
   }
-  //const filter = { _id: req.body.id };
-  //const update = { title: req.body.title };
-  // const projectTitle = await Project.findOneAndUpdate(filter, update, {
-  //   new: true,
-  // });
-  // res.json(projectTitle?.toJSON());
 };
 
-//DELETE PROJECT
 export const deleteProject = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  // Do: only project lead must be delete!
   const { projectId, userId } = req.query;
   try {
     const project = await prisma.project.findUnique({
@@ -231,32 +227,26 @@ export const deleteProject = async (
       return;
     }
 
-    await prisma.issue.deleteMany({
-      where: { ProjectId: projectId as string },
-    });
-    await prisma.userBoard.deleteMany({
-      where: {
-        Board: {
-          ProjectId: projectId as string,
-        },
-      },
-    });
-    await prisma.sprint.deleteMany({
-      where: {
-        Board: {
-          ProjectId: projectId as string,
-        },
-      },
-    });
-    await prisma.board.deleteMany({
-      where: { ProjectId: projectId as string },
-    });
-    await prisma.userProject.deleteMany({
-      where: { ProjectId: projectId as string },
-    });
-    await prisma.project.delete({
-      where: { Id: projectId as string },
-    });
+    await prisma.$transaction([
+      prisma.issue.deleteMany({ where: { ProjectId: projectId as string } }),
+      prisma.backlog.deleteMany({
+        where: { Board: { ProjectId: projectId as string } },
+      }),
+      prisma.userBoard.deleteMany({
+        where: { Board: { ProjectId: projectId as string } },
+      }),
+      prisma.sprint.deleteMany({
+        where: { Board: { ProjectId: projectId as string } },
+      }),
+      prisma.column.deleteMany({
+        where: { Board: { ProjectId: projectId as string } },
+      }),
+      prisma.board.deleteMany({ where: { ProjectId: projectId as string } }), // Delete board after related records
+      prisma.userProject.deleteMany({
+        where: { ProjectId: projectId as string },
+      }),
+      prisma.project.delete({ where: { Id: projectId as string } }),
+    ]);
 
     res.sendStatus(200).json({
       message: "Successfully deleted",

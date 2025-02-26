@@ -100,12 +100,12 @@ model Issue {
   UserId      String?
   LabelId     String?
   BoardId     String?
-  ColumnId    String
+  ColumnId    String?
   BacklogId   String?
   SprintId    String?
   Backlog     Backlog?    @relation(fields: [BacklogId], references: [Id])
   Board       Board?      @relation(fields: [BoardId], references: [Id])
-  Column      Column      @relation(fields: [ColumnId], references: [Id])
+  Column      Column?      @relation(fields: [ColumnId], references: [Id])
   Label       Label?      @relation(fields: [LabelId], references: [Id])
   Project     Project     @relation(fields: [ProjectId], references: [Id])
   Sprint      Sprint?     @relation(fields: [SprintId], references: [Id])
