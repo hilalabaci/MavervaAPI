@@ -197,6 +197,7 @@ export const updateCard = async (
 ): Promise<void> => {
   try {
     const { oldSprintId, newSprintId, cardId, boardId, status } = req.body;
+    console.log(`oldSprintId:`,oldSprintId, `newSprintId:`,newSprintId, cardId, boardId, status)
 
     // First, handle the case where only the status is being updated
     if (status && !oldSprintId && !newSprintId) {
@@ -246,12 +247,10 @@ export const updateCard = async (
     }
 
     // Finally, update the status of the card after all the moves
-    const updatedIssue = await prisma.issue.update({
+    const updatedIssue = await prisma.issue.findUnique({
       where: { Id: cardId },
-      data: { Status: Number(status) },
     });
 
-    // Send the updated issue as the response after all operations are completed
     res.json(updatedIssue);
     return;
   } catch (error) {

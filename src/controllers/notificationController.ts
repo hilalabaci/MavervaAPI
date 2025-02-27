@@ -1,30 +1,58 @@
 import { Request, Response } from "express";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export const getNotification = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  //   const filter = { toUserId: req.query.userId };
-  //   const all = await Notification.find(filter).populate({
-  //     path: "fromUserId",
-  //     select: "-password", // Exclude the password field
-  //   });
-  //   res.json(all);
-  // };
-  // export const markReadNotification = async (
-  //   req: Request,
-  //   res: Response,
-  // ): Promise<void> => {
-  //   const notificationIds = req.body.notificationIds;
-  //   if (!notificationIds?.length) {
-  //     res.status(400).json({
-  //       message: "invalid request",
-  //     });
-  //     return;
-  //   }
-  //   const filter = { _id: { $in: notificationIds } };
-  //   const update = { isRead: true };
-  //   await Notification.updateMany(filter, update);
-  //   res.sendStatus(200);
-  //   return;
+  try {
+    const { userId } = req.query;
+    if (!userId || typeof userId !== "string") {
+      res.status(400).json({ message: "Invalid user ID" });
+      return;
+    }
+
+    const notifications = await prisma.notification.findMany({
+      where: { ToUserId: userId },
+      include: {
+        FromUser: {
+          select: {
+            Id: true,
+            FullName: true,
+            Email: true,
+          },
+        },
+      },
+    });
+
+    res.json(notifications);
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const markReadNotification = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { notificationIds } = req.body;
+    if (!notificationIds?.length) {
+      res.status(400).json({ message: "Invalid request" });
+      return;
+    }
+
+    await prisma.notification.updateMany({
+      where: { Id: { in: notificationIds } },
+      data: { IsRead: true },
+    });
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error marking notifications as read:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };

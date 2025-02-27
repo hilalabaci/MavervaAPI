@@ -38,10 +38,10 @@ import {
 //   deleteLabel,
 //   getLabels,
 // } from "../controllers/labelController";
-// import {
-//   getNotification,
-//   markReadNotification,
-// } from "../controllers/notificationController";
+import {
+  getNotification,
+  markReadNotification,
+} from "../controllers/notificationController";
 import { home } from "../controllers/homeController";
 import { createProjectKey } from "../controllers/projectKeyController";
 
@@ -78,8 +78,8 @@ router.put("/card/content", updateCardContent);
 //router.post("/label", addLabel);
 //router.get("/label", getLabels);
 //router.delete("/label", deleteLabel);
-//router.get("/notification", getNotification);
-//router.post("/notification/mark-read", markReadNotification);
+router.get("/notification", getNotification);
+router.post("/notification/mark-read", markReadNotification);
 router.get("/createProjectKey", createProjectKey);
 
 export default router;
