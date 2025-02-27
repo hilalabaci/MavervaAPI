@@ -74,7 +74,7 @@ export const createProject = async (
         },
         {
           Name: "Done",
-          Status: 3,
+          Status: 99,
           BoardId: board.Id,
         },
       ],
@@ -320,3 +320,4 @@ export const getSelectedProject = async (
     });
   }
 };
+

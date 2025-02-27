@@ -25,6 +25,7 @@ export const getBacklog = async (
             Label: true,
             Summary: true,
             Status: true,
+            Key: true,
           },
         },
       },

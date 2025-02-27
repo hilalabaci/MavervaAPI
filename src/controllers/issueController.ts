@@ -197,7 +197,6 @@ export const updateCard = async (
 ): Promise<void> => {
   try {
     const { oldSprintId, newSprintId, cardId, boardId, status } = req.body;
-    console.log(`oldSprintId:`,oldSprintId, `newSprintId:`,newSprintId, cardId, boardId, status)
 
     // First, handle the case where only the status is being updated
     if (status && !oldSprintId && !newSprintId) {
@@ -211,6 +210,7 @@ export const updateCard = async (
 
     // If both sprint IDs are provided, handle the case where the card moves from one sprint to another
     if (newSprintId && oldSprintId) {
+      if (oldSprintId === newSprintId) return;
       // Move the issue from the old sprint to the new sprint
       await prisma.sprint.update({
         where: { Id: newSprintId },
