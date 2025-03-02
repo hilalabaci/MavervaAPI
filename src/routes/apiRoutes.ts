@@ -72,7 +72,7 @@ router.get("/projects/:projectKey/boards/:boardId", getActiveSprint);
 router.get("/column", getColumn);
 router.post("/column", addColumn);
 router.delete("/column", deleteColumn);
-router.post("/card", addIssue);
+router.post("/issue", addIssue);
 router.get("/issue", getIssues);
 router.put("/issue", updateIssue);
 router.delete("/issue", deleteIssue);
