@@ -8,8 +8,8 @@ datasource db {
 }
 
 model User {
-  Id                    String         @id @default(uuid())
-  Email                 String         @unique
+  Id                    String                @id @default(uuid())
+  Email                 String                @unique
   Password              String?
   FullName              String?
   Issues                Issue[]
@@ -17,29 +17,31 @@ model User {
   Boards                Board[]
   UserIssues            UserIssue[]
   UserProjects          UserProject[]
-  SentNotifications     Notification[] @relation(name: "SentNotifications")
-  ReceivedNotifications Notification[] @relation(name: "ReceivedNotifications")
+  SentNotifications     Notification[]        @relation(name: "SentNotifications")
+  ReceivedNotifications Notification[]        @relation(name: "ReceivedNotifications")
   Notifications         Notification[]
-  ProjectLeadUsers      Project[]      @relation(name: "ProjectLeadUser")
+  ProjectLeadUsers      Project[]             @relation(name: "ProjectLeadUser")
   UserBoard             UserBoard[]
-  Sprint                Sprint?        @relation(fields: [SprintId], references: [Id])
+  Sprint                Sprint?               @relation(fields: [SprintId], references: [Id])
   SprintId              String?
   ProfilePicture        String?
-  Role                  String         @default("member")
+  Role                  String                @default("member")
+  UserFavoriteProject   UserFavouriteProject[]
 }
 
 model Project {
-  Id           String        @id @default(uuid())
-  Name         String
-  Key          String        @unique
-  Description  String?
-  LeadUserId   String
-  CreatedAt    DateTime      @default(now())
-  Boards       Board[]
-  Issues       Issue[]
-  LeadUser     User          @relation("ProjectLeadUser", fields: [LeadUserId], references: [Id])
-  Users        User[]
-  UserProjects UserProject[]
+  Id                  String                @id @default(uuid())
+  Name                String
+  Key                 String                @unique
+  Description         String?
+  LeadUserId          String
+  CreatedAt           DateTime              @default(now())
+  Boards              Board[]
+  Issues              Issue[]
+  LeadUser            User                  @relation("ProjectLeadUser", fields: [LeadUserId], references: [Id])
+  Users               User[]
+  UserProjects        UserProject[]
+  UserFavoriteProject UserFavouriteProject[]
 }
 
 model Board {
@@ -105,7 +107,7 @@ model Issue {
   SprintId    String?
   Backlog     Backlog?    @relation(fields: [BacklogId], references: [Id])
   Board       Board?      @relation(fields: [BoardId], references: [Id])
-  Column      Column?      @relation(fields: [ColumnId], references: [Id])
+  Column      Column?     @relation(fields: [ColumnId], references: [Id])
   Label       Label?      @relation(fields: [LabelId], references: [Id])
   Project     Project     @relation(fields: [ProjectId], references: [Id])
   Sprint      Sprint?     @relation(fields: [SprintId], references: [Id])
@@ -150,6 +152,15 @@ model UserIssue {
   User    User   @relation(fields: [UserId], references: [Id])
 
   @@id([UserId, IssueId])
+}
+
+model UserFavouriteProject {
+  UserId    String
+  ProjectId String
+  Project   Project @relation(fields: [ProjectId], references: [Id])
+  User      User    @relation(fields: [UserId], references: [Id])
+
+  @@id([UserId, ProjectId])
 }
 
 model Notification {

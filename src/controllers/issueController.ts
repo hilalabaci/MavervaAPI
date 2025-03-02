@@ -149,7 +149,7 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getCards = async (req: Request, res: Response): Promise<void> => {
+export const getIssues = async (req: Request, res: Response): Promise<void> => {
   const boardId = req.query.boardId;
   if (!boardId) {
     res.status(400).json({ message: "BoardId is required" });
@@ -174,7 +174,7 @@ export const getCards = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const updateCardContent = async (
+export const updateIssueContent = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
@@ -191,7 +191,7 @@ export const updateCardContent = async (
     res.status(500).json({ message: "Error updating card content" });
   }
 };
-export const updateCard = async (
+export const updateIssue = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
@@ -259,7 +259,7 @@ export const updateCard = async (
   }
 };
 
-export const deleteCard = async (
+export const deleteIssue = async (
   req: Request,
   res: Response,
 ): Promise<void> => {

@@ -166,7 +166,19 @@ export const getProjects = async (
         },
       },
     });
-    res.json(projects);
+    const favouriteProjects = await prisma.userFavouriteProject.findMany({
+      where: { UserId: userId },
+      select: { ProjectId: true },
+    });
+
+    const projectsWithFavourite = projects.map((project) => ({
+      ...project,
+      IsFavourite: favouriteProjects.some(
+        (fav) => fav.ProjectId === project.Id,
+      ),
+    }));
+
+    res.json(projectsWithFavourite);
   } catch (err) {
     res.status(500).json({
       message: "Error fetching projects",
@@ -199,61 +211,6 @@ export const updateProjectTitle = async (
   } catch (err) {
     res.status(500).json({
       message: "Error updating project title",
-      error: (err as Error).message,
-    });
-  }
-};
-
-export const deleteProject = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const { projectId, userId } = req.query;
-  try {
-    const project = await prisma.project.findUnique({
-      where: { Id: projectId as string },
-      include: { LeadUser: true },
-    });
-
-    if (!project) {
-      res.status(404).json({ message: "Project not found" });
-      return;
-    }
-
-    if (project.LeadUserId !== userId) {
-      res
-        .status(403)
-        .json({ message: "Only project lead can delete the project" });
-      return;
-    }
-
-    await prisma.$transaction([
-      prisma.issue.deleteMany({ where: { ProjectId: projectId as string } }),
-      prisma.backlog.deleteMany({
-        where: { Board: { ProjectId: projectId as string } },
-      }),
-      prisma.userBoard.deleteMany({
-        where: { Board: { ProjectId: projectId as string } },
-      }),
-      prisma.sprint.deleteMany({
-        where: { Board: { ProjectId: projectId as string } },
-      }),
-      prisma.column.deleteMany({
-        where: { Board: { ProjectId: projectId as string } },
-      }),
-      prisma.board.deleteMany({ where: { ProjectId: projectId as string } }), // Delete board after related records
-      prisma.userProject.deleteMany({
-        where: { ProjectId: projectId as string },
-      }),
-      prisma.project.delete({ where: { Id: projectId as string } }),
-    ]);
-
-    res.sendStatus(200).json({
-      message: "Successfully deleted",
-    });
-  } catch (err) {
-    res.status(500).json({
-      message: "Error deleting project",
       error: (err as Error).message,
     });
   }
@@ -320,4 +277,139 @@ export const getSelectedProject = async (
     });
   }
 };
+export const updateProjectToFavorite = async (req: Request, res: Response) => {
+  const { projectId, userId, isFavourite } = req.query;
+  try {
+    if (!projectId || !userId || isFavourite === undefined) {
+      res.status(400).json({
+        message: "Project ID, User ID and isFavorite are required",
+      });
+      return;
+    }
 
+    const userProject = await prisma.userProject.findFirst({
+      where: {
+        ProjectId: projectId as string,
+        UserId: userId as string,
+      },
+    });
+    if (!userProject) {
+      res.status(404).json({ message: "User project not found" });
+      return;
+    }
+    if (isFavourite === "true") {
+      const UserFavoriteProject = await prisma.userFavouriteProject.findFirst({
+        where: {
+          ProjectId: projectId as string,
+          UserId: userId as string,
+        },
+      });
+      if (UserFavoriteProject) {
+        res.status(400).json({ message: "Project already favorite" });
+        return;
+      }
+      await prisma.userFavouriteProject.create({
+        data: {
+          ProjectId: projectId as string,
+          UserId: userId as string,
+        },
+      });
+    } else {
+      await prisma.userFavouriteProject.deleteMany({
+        where: {
+          ProjectId: projectId as string,
+          UserId: userId as string,
+        },
+      });
+    }
+    const project = await prisma.project.findUnique({
+      where: { Id: projectId as string },
+      include: {
+        Users: {
+          select: {
+            Id: true,
+            Email: true,
+            FullName: true,
+            ProfilePicture: true,
+          },
+        },
+        Boards: {
+          select: {
+            Id: true,
+            Name: true,
+            UserBoards: {
+              where: {
+                UserId: userId as string,
+                Role: { in: ["Admin", "Member", "Viewer"] },
+              },
+              select: {
+                Role: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({
+      message: "Error updating project favorite",
+      error: (err as Error).message,
+    });
+  }
+};
+
+export const deleteProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { projectId, userId } = req.query;
+  try {
+    const project = await prisma.project.findUnique({
+      where: { Id: projectId as string },
+      include: { LeadUser: true },
+    });
+
+    if (!project) {
+      res.status(404).json({ message: "Project not found" });
+      return;
+    }
+
+    if (project.LeadUserId !== userId) {
+      res
+        .status(403)
+        .json({ message: "Only project lead can delete the project" });
+      return;
+    }
+
+    await prisma.$transaction([
+      prisma.issue.deleteMany({ where: { ProjectId: projectId as string } }),
+      prisma.backlog.deleteMany({
+        where: { Board: { ProjectId: projectId as string } },
+      }),
+      prisma.userBoard.deleteMany({
+        where: { Board: { ProjectId: projectId as string } },
+      }),
+      prisma.sprint.deleteMany({
+        where: { Board: { ProjectId: projectId as string } },
+      }),
+      prisma.column.deleteMany({
+        where: { Board: { ProjectId: projectId as string } },
+      }),
+      prisma.board.deleteMany({ where: { ProjectId: projectId as string } }), // Delete board after related records
+      prisma.userProject.deleteMany({
+        where: { ProjectId: projectId as string },
+      }),
+      prisma.project.delete({ where: { Id: projectId as string } }),
+    ]);
+
+    res.sendStatus(200).json({
+      message: "Successfully deleted",
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Error deleting project",
+      error: (err as Error).message,
+    });
+  }
+};

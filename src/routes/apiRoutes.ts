@@ -7,6 +7,7 @@ import {
   getSelectedProject,
   getProjects,
   updateProjectTitle,
+  updateProjectToFavorite,
 } from "../controllers/projectController";
 import {
   addUserToBoard,
@@ -28,10 +29,10 @@ import {
 } from "../controllers/columnController";
 import {
   addIssue,
-  deleteCard,
-  getCards,
-  updateCard,
-  updateCardContent,
+  deleteIssue,
+  getIssues,
+  updateIssue,
+  updateIssueContent,
 } from "../controllers/issueController";
 // import {
 //   addLabel,
@@ -59,6 +60,7 @@ router.patch("/project", updateProjectTitle);
 router.delete("/project", deleteProject);
 router.post("/project/boards/add-user", addUserToBoard);
 router.get("/projects/:projectKey", getSelectedProject);
+router.put("/projects/favourite", updateProjectToFavorite);
 router.post("/board", addBoard);
 router.get("/board", getBoards);
 router.get("/board/users", getUserstoBoard);
@@ -71,10 +73,10 @@ router.get("/column", getColumn);
 router.post("/column", addColumn);
 router.delete("/column", deleteColumn);
 router.post("/card", addIssue);
-router.get("/card", getCards);
-router.put("/card", updateCard);
-router.delete("/card", deleteCard);
-router.put("/card/content", updateCardContent);
+router.get("/issue", getIssues);
+router.put("/issue", updateIssue);
+router.delete("/issue", deleteIssue);
+router.put("/issue/content", updateIssueContent);
 //router.post("/label", addLabel);
 //router.get("/label", getLabels);
 //router.delete("/label", deleteLabel);
