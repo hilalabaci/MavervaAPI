@@ -24,11 +24,14 @@ export const addColumn = async (req: Request, res: Response): Promise<void> => {
   try {
     const { title, boardId, userId } = req.body;
 
-    const user = await prisma.user.findUnique({
-      where: { Id: req.body.userId },
-      select: { Role: true },
+    const userInBoard = await prisma.userBoard.findFirst({
+      where: {
+        BoardId: boardId as string,
+        UserId: userId as string,
+        Role: "Admin",
+      },
     });
-    if (user?.Role !== "Admin") {
+    if (!userInBoard) {
       res
         .status(403)
         .json({ message: "You do not have permission to add columns" });
@@ -82,28 +85,30 @@ export const deleteColumn = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { columnId, userId } = req.query;
-    const user = await prisma.user.findUnique({
-      where: { Id: req.body.userId },
-      select: { Role: true },
+    const { columnId } = req.query;
+    const userId = req.body.userId;
+
+    const column = await prisma.column.findUnique({
+      where: { Id: columnId as string },
     });
-    if (user?.Role !== "Admin") {
+    if (!column) {
+      res.status(404).json({ message: "Column not found" });
+      return;
+    }
+
+    const boardId = column.BoardId;
+
+    const userBoard = await prisma.userBoard.findFirst({
+      where: { UserId: userId, BoardId: boardId, Role: "Admin" },
+    });
+    if (!userBoard) {
       res
         .status(403)
         .json({ message: "You do not have permission to delete columns" });
       return;
     }
 
-    const column = await prisma.column.findUnique({
-      where: { Id: columnId as string },
-    });
-
-    if (!column) {
-      res.status(404).send("Column not found");
-      return;
-    }
     const columnStatus = column?.Status;
-    const boardId = column.BoardId;
 
     const updatedCards = await prisma.issue.updateMany({
       where: { Status: columnStatus, BoardId: boardId },

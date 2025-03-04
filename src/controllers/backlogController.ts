@@ -21,7 +21,18 @@ export const getBacklog = async (
         Issues: {
           select: {
             Id: true,
-            User: true,
+            UserIssues: {
+              include: {
+                User: {
+                  select: {
+                    Id: true,
+                    Email: true,
+                    FullName: true,
+                    ProfilePicture: true,
+                  },
+                },
+              },
+            },
             Label: true,
             Summary: true,
             Status: true,
@@ -31,7 +42,12 @@ export const getBacklog = async (
       },
     });
     if (backlog) {
-      res.json(backlog?.Issues);
+      res.json(
+        backlog.Issues.map((issue) => ({
+          ...issue,
+          Users: issue.UserIssues.map((ui) => ui.User),
+        })),
+      );
       return;
     }
 

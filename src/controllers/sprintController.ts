@@ -7,18 +7,19 @@ export const addSprint = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, sprintGoal, startDate, endDate, boardId, userId } = req.body;
 
-    const findBoard = await prisma.board.findMany({
+    const foundBoards = await prisma.board.findMany({
       where: {
         Id: boardId,
-        Users: { some: { Id: userId } },
+        UserBoards: { some: { UserId: userId } },
       },
     });
-    if (!findBoard) {
+    if (!foundBoards.length) {
       res.status(400).json({
         message: "board not found",
       });
       return;
     }
+
     const newSprint = await prisma.sprint.create({
       data: {
         Name: name,
@@ -26,7 +27,6 @@ export const addSprint = async (req: Request, res: Response): Promise<void> => {
         StartDate: startDate,
         EndDate: endDate,
         BoardId: boardId,
-        Users: { connect: { Id: userId } },
       },
     });
 
@@ -65,11 +65,9 @@ export const getSprints = async (
             Column: true,
             Label: true,
             Sprint: true,
-            User: true,
             UserIssues: true,
           },
         },
-        Users: true,
       },
     });
 

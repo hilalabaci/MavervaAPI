@@ -22,7 +22,16 @@ export const getActiveSprint = async (
       include: {
         Issues: {
           include: {
-            User: true,
+            UserIssues: {
+              include: {
+                User: {
+                  select: {
+                    FullName: true,
+                    Email: true,
+                  },
+                },
+              },
+            },
             Label: true,
           },
         },
@@ -35,7 +44,15 @@ export const getActiveSprint = async (
     });
 
     if (sprint) {
-      res.json(sprint);
+      res.json({
+        ...sprint,
+        Issues: sprint.Issues.map((issue) => {
+          return {
+            ...issue,
+            Users: issue.UserIssues.map((user) => user.User),
+          };
+        }),
+      });
       return;
     }
     res.status(400).json({ message: "Active sprint not found" });

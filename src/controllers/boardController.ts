@@ -11,7 +11,7 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
     const projects = await prisma.project.findMany({
       where: {
         Key: { in: projectKeys },
-        Users: { some: { Id: userId } },
+        UserProjects: { some: { UserId: userId } },
       },
     });
 
@@ -22,8 +22,8 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-    const user = await prisma.user.findUnique({
-      where: { Id: userId },
+    const user = await prisma.userProject.findFirst({
+      where: { UserId: userId },
       select: { Role: true },
     });
     if (user?.Role !== "Admin") {
@@ -36,11 +36,19 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
     const newBoard = await prisma.board.create({
       data: {
         Name: title,
-        Users: { connect: { Id: userId } },
         Project: { connect: { Id: projects[0].Id } },
         LeadUserId: userId,
-        Key: `BOARD-${Date.now()}`,
+        Key: `${projectKeys[0]}-${title}`,
         //projects: { connect: projects.map((p) => ({ id: p.Id })) },
+      },
+    });
+
+    await prisma.userBoard.create({
+      data: {
+        UserId: userId,
+        BoardId: newBoard.Id,
+        Role: "Admin",
+        ProjectId: projects[0].Id,
       },
     });
 
@@ -51,6 +59,11 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
         { Name: "In Progress", Status: 2, BoardId: newBoard.Id },
         { Name: "Done", Status: 99, BoardId: newBoard.Id },
       ],
+    });
+    await prisma.backlog.create({
+      data: {
+        BoardId: newBoard.Id,
+      },
     });
     await prisma.sprint.create({
       data: {
@@ -83,6 +96,7 @@ export const getBoards = async (req: Request, res: Response): Promise<void> => {
   try {
     const projectKey = req.query.projectKey;
     const userId = req.query.userId as string;
+
     if (!projectKey && !userId) {
       res.status(400).json({ message: "User ID and Project Key is required" });
       return;
@@ -91,24 +105,24 @@ export const getBoards = async (req: Request, res: Response): Promise<void> => {
     const project = await prisma.project.findFirst({
       where: {
         Key: projectKey as string,
-        Users: { some: { Id: userId } },
+        UserProjects: { some: { UserId: userId } },
       },
       select: { Id: true },
     });
+
     if (!project) {
       res.status(400).json({ message: "Project not found" });
       return;
     }
     // Check if the user has a valid role
-    const user = await prisma.user.findUnique({
-      where: { Id: userId },
+    const user = await prisma.userProject.findFirst({
+      where: { UserId: userId, ProjectId: project.Id },
       select: { Role: true },
     });
-
     if (
-      user?.Role !== "Admin" &&
-      user?.Role !== "Member" &&
-      user?.Role !== "Viewer"
+      user?.Role.toLowerCase() !== "admin" &&
+      user?.Role.toLowerCase() !== "member" &&
+      user?.Role.toLowerCase() !== "viewer"
     ) {
       res
         .status(403)
@@ -118,15 +132,28 @@ export const getBoards = async (req: Request, res: Response): Promise<void> => {
 
     const boards = await prisma.board.findMany({
       where: {
-        Users: { some: { Id: userId } },
-        ProjectId: project.Id,
+        UserBoards: {
+          some: {
+            UserId: userId,
+            ProjectId: project.Id,
+          },
+        },
       },
       include: {
-        Users: { select: { Id: true, Email: true, FullName: true } },
+        UserBoards: {
+          include: {
+            User: { select: { Id: true, Email: true, FullName: true } },
+          },
+        },
       },
     });
 
-    res.json(boards);
+    res.json(
+      boards.map((board) => ({
+        ...board,
+        Users: board.UserBoards.map((ub) => ub.User),
+      })),
+    );
   } catch (err) {
     res.status(500).json({
       message: "Error fetching boards",
@@ -140,32 +167,32 @@ export const addUserToBoard = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { projectId, boardIds, email, userId } = req.body;
+    const { projectId, boardIds, email, userId, role } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { Email: email } });
-    if (!user) {
+    const addedUser = await prisma.user.findFirst({
+      where: { Email: email },
+    });
+
+    if (!addedUser) {
       res.status(400).json({
-        message: "User not found",
+        message: " Added User not found",
       });
       return;
     }
 
-    const project = await prisma.project.findUnique({
-      where: { Id: projectId },
+    const userProject = await prisma.userProject.findFirst({
+      where: { ProjectId: projectId, UserId: userId },
+      select: { Role: true },
     });
-    if (!project) {
+
+    if (!userProject) {
       res.status(400).json({
         message: "Project not found",
       });
       return;
     }
-    // Check if the current user has the right role (Admin)
-    const currentUser = await prisma.user.findUnique({
-      where: { Id: req.body.userId },
-      select: { Role: true },
-    });
 
-    if (currentUser?.Role !== "Admin") {
+    if (userProject.Role.toLowerCase() !== "admin") {
       res.status(403).json({
         message: "You do not have permission to add users to boards",
       });
@@ -174,7 +201,7 @@ export const addUserToBoard = async (
 
     // Check if the boards exist.
     const boards = await prisma.board.findMany({
-      where: { Id: { in: boardIds } },
+      where: { Id: { in: boardIds }, ProjectId: projectId },
     });
     if (!boards.length) {
       res.status(400).json({
@@ -182,44 +209,32 @@ export const addUserToBoard = async (
       });
       return;
     }
-    // Check if a user exists throughout the project.
-    await prisma.project.update({
-      where: { Id: projectId },
-      data: { Users: { connect: { Id: user.Id } } },
-    });
 
     await Promise.all(
-      boardIds.map((boardId: string) =>
-        prisma.board.update({
-          where: { Id: boardId }, // Ensure the field name matches your schema (use `id`, not `Id`)
+      boards.map((board) =>
+        prisma.userBoard.create({
           data: {
-            Users: {
-              connect: { Id: user.Id }, // Use lowercase `id` if that's how it's defined in your schema
-            },
+            UserId: addedUser.Id,
+            BoardId: board.Id,
+            Role: role,
+            ProjectId: projectId,
           },
         }),
       ),
     );
+    const project = await prisma.userProject.findFirst({
+      where: { ProjectId: projectId, UserId: addedUser.Id },
+    });
+    if (!project) {
+      await prisma.userProject.create({
+        data: {
+          ProjectId: projectId,
+          UserId: addedUser.Id,
+          Role: "Viewer",
+        },
+      });
+    }
 
-    // if (projectMatch.users.includes(userMatch._id)) {
-    //   res.status(400).json({
-    //     message: "User already exists in the project",
-    //   });
-    //   return;
-    // }
-    // Her bir board'a kullanıcı ekle
-    // for (const board of boardsMatch) {
-    //   if (!board.users.includes(userMatch._id)) {
-    //     board.users.push(userMatch._id); // Kullanıcıyı board'a ekle
-    //     await board.save(); // Her board'u ayrı ayrı kaydet
-    //   }
-    // }
-
-    // Kullanıcıyı projeye ekle
-    // projectMatch.users.push(userMatch._id);
-    // await projectMatch.save();
-
-    // Başarılı mesajı dön
     res
       .status(200)
       .json({ message: "User successfully added to boards and project" });
@@ -234,35 +249,46 @@ export const addUserToBoard = async (
 };
 
 // GET USERS FROM BOARD
-export const getUserstoBoard = async (
+export const getUsersBoards = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
   try {
-    const boardId = req.query.boardId as string;
-    if (!boardId) {
+    const { boardId, userId } = req.query;
+    if (!boardId || !userId) {
       res.status(400).json({ message: "BoardId is required" });
       return;
     }
-    const board = await prisma.board.findUnique({
-      where: { Id: boardId },
-      include: { Users: true },
+    const userBoard = await prisma.userBoard.findFirst({
+      where: { BoardId: boardId as string, UserId: userId as string },
+      include: {
+        Board: {
+          select: {
+            UserBoards: {
+              include: {
+                User: true,
+              },
+            },
+          },
+        },
+      },
     });
-    // const board = await Board.findById(boardId).populate<{
-    //   users: IUser[];
-    // }>("users");
-
-    if (!board || !board.Users) {
-      res.status(404).json({ message: "No users found for this board" });
+    if (!userBoard || !userBoard.Board) {
+      res
+        .status(403)
+        .json({ message: "You do not have permission to view this board" });
       return;
     }
-    const filteredUsers = board.Users;
-    // const filteredUsers = board.users.map((user) => ({
-    //   email: user.email,
-    //   fullName: user.fullName,
-    //   _id: user._id,
-    // }));
-    res.status(200).json(filteredUsers);
+    const role = userBoard.Role.toLowerCase();
+    if (!["admin", "member", "viewer"].includes(role)) {
+      res.status(403).json({
+        message: "You do not have permission to view users for this board",
+      });
+      return;
+    }
+    res
+      .status(200)
+      .json({ users: userBoard.Board.UserBoards.map((ub) => ub.User) });
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ message: "An error occurred while fetching users" });

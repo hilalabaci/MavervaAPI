@@ -13,7 +13,7 @@ import {
   addUserToBoard,
   addBoard,
   getBoards,
-  getUserstoBoard,
+  getUsersBoards,
 } from "../controllers/boardController";
 import { getBacklog } from "../controllers/backlogController";
 import {
@@ -63,7 +63,7 @@ router.get("/projects/:projectKey", getSelectedProject);
 router.put("/projects/favourite", updateProjectToFavorite);
 router.post("/board", addBoard);
 router.get("/board", getBoards);
-router.get("/board/users", getUserstoBoard);
+router.get("/project/board/users", getUsersBoards);
 router.get("/projects/:projectKey/boards/:boardId/backlog", getBacklog);
 router.post("/sprint", addSprint);
 router.get("/sprint", getSprints);

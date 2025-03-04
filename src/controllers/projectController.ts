@@ -23,9 +23,8 @@ export const createProject = async (
         Name: title,
         Key: projectKey,
         Description: description || "",
-        Users: { connect: { Id: leadUser.Id } },
         UserProjects: {
-          create: [{ UserId: leadUser.Id }],
+          create: [{ UserId: leadUser.Id, Role: "Admin" }],
         },
         LeadUser: {
           connect: { Id: leadUser.Id },
@@ -40,12 +39,12 @@ export const createProject = async (
         Key: `${projectKey}_board`,
         LeadUserId: leadUser.Id,
         ProjectId: newProject.Id,
-        Users: { connect: { Id: leadUser.Id } },
         UserBoards: {
           create: [
             {
               UserId: leadUser.Id,
-              ProjectId: newProject.Id, // Assuming you want to link the user to the board in UserBoard
+              ProjectId: newProject.Id,
+              Role: "Admin",
             },
           ],
         },
@@ -85,10 +84,6 @@ export const createProject = async (
       },
     });
 
-    await prisma.user.update({
-      where: { Id: leadUser.Id },
-      data: { Role: "Admin" },
-    });
     //connect project to board
     await prisma.project.update({
       where: { Id: newProject.Id },
@@ -98,15 +93,7 @@ export const createProject = async (
         },
       },
     });
-    //add user to project
-    await prisma.user.update({
-      where: { Id: leadUser.Id },
-      data: {
-        Projects: {
-          connect: { Id: newProject.Id },
-        },
-      },
-    });
+
     // return data in Proje and board
     const projectToReturn = await prisma.project.findUnique({
       where: { Id: newProject.Id },
@@ -116,13 +103,29 @@ export const createProject = async (
             Sprints: true,
           },
         },
-        Users: true,
+        UserProjects: {
+          include: {
+            User: {
+              select: {
+                Id: true,
+                Email: true,
+                FullName: true,
+                ProfilePicture: true,
+              },
+            },
+          },
+        },
         LeadUser: true,
       },
     });
     res.status(201).json({
       message: "Project created successfully",
-      project: projectToReturn,
+      project: {
+        ...projectToReturn,
+        Users: projectToReturn?.UserProjects.map(
+          (userProject) => userProject.User,
+        ),
+      },
     });
   } catch (err) {
     res.status(500).json({
@@ -144,13 +147,22 @@ export const getProjects = async (
   try {
     const projects = await prisma.project.findMany({
       where: {
-        Users: {
-          some: { Id: userId },
+        UserProjects: {
+          some: { UserId: userId },
         },
       },
       include: {
-        Users: {
-          select: { Id: true, Email: true, FullName: true, Role: true },
+        UserProjects: {
+          include: {
+            User: {
+              select: {
+                Id: true,
+                Email: true,
+                FullName: true,
+                ProfilePicture: true,
+              },
+            },
+          },
         },
         Boards: true,
         LeadUser: {
@@ -159,8 +171,6 @@ export const getProjects = async (
             Email: true,
             FullName: true,
             Password: false,
-            Boards: true,
-            Projects: true,
             ProfilePicture: true,
           },
         },
@@ -176,6 +186,7 @@ export const getProjects = async (
       IsFavourite: favouriteProjects.some(
         (fav) => fav.ProjectId === project.Id,
       ),
+      Users: project.UserProjects.map((userProject) => userProject.User),
     }));
 
     res.json(projectsWithFavourite);
@@ -228,12 +239,16 @@ export const getSelectedProject = async (
     const project = await prisma.project.findUnique({
       where: { Key: projectKey },
       include: {
-        Users: {
-          select: {
-            Id: true,
-            Email: true,
-            FullName: true,
-            ProfilePicture: true,
+        UserProjects: {
+          include: {
+            User: {
+              select: {
+                Id: true,
+                Email: true,
+                FullName: true,
+                ProfilePicture: true,
+              },
+            },
           },
         },
         Boards: {
@@ -325,12 +340,16 @@ export const updateProjectToFavorite = async (req: Request, res: Response) => {
     const project = await prisma.project.findUnique({
       where: { Id: projectId as string },
       include: {
-        Users: {
-          select: {
-            Id: true,
-            Email: true,
-            FullName: true,
-            ProfilePicture: true,
+        UserProjects: {
+          include: {
+            User: {
+              select: {
+                Id: true,
+                Email: true,
+                FullName: true,
+                ProfilePicture: true,
+              },
+            },
           },
         },
         Boards: {
@@ -364,18 +383,19 @@ export const deleteProject = async (
   res: Response,
 ): Promise<void> => {
   const { projectId, userId } = req.query;
+  console.log(`projectId:`, projectId, "userId:", userId);
   try {
-    const project = await prisma.project.findUnique({
-      where: { Id: projectId as string },
-      include: { LeadUser: true },
+    const userProject = await prisma.userProject.findFirst({
+      where: { ProjectId: projectId as string, UserId: userId as string },
+      include: { Project: true },
     });
 
-    if (!project) {
+    if (!userProject || !userProject.Project) {
       res.status(404).json({ message: "Project not found" });
       return;
     }
 
-    if (project.LeadUserId !== userId) {
+    if (userProject.Role.toLowerCase() !== "admin") {
       res
         .status(403)
         .json({ message: "Only project lead can delete the project" });
@@ -383,6 +403,9 @@ export const deleteProject = async (
     }
 
     await prisma.$transaction([
+      prisma.userIssue.deleteMany({
+        where: { Issue: { Board: { ProjectId: projectId as string } } },
+      }),
       prisma.issue.deleteMany({ where: { ProjectId: projectId as string } }),
       prisma.backlog.deleteMany({
         where: { Board: { ProjectId: projectId as string } },
@@ -400,10 +423,13 @@ export const deleteProject = async (
       prisma.userProject.deleteMany({
         where: { ProjectId: projectId as string },
       }),
+      prisma.userFavouriteProject.deleteMany({
+        where: { ProjectId: projectId as string },
+      }),
       prisma.project.delete({ where: { Id: projectId as string } }),
     ]);
 
-    res.sendStatus(200).json({
+    res.status(200).json({
       message: "Successfully deleted",
     });
   } catch (err) {

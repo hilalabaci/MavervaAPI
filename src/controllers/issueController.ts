@@ -10,7 +10,7 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
     const project = await prisma.project.findFirst({
       where: {
         Key: projectKey,
-        Users: { some: { Id: userId } },
+        UserProjects: { some: { UserId: userId } },
         Boards: { some: { Id: boardId } },
       },
     });
@@ -56,16 +56,24 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
           Project: {
             connect: { Id: project.Id },
           },
-          User: {
-            connect: {
-              Id: userId,
-            },
-          },
+        },
+      });
+
+      const userIssue = await prisma.userIssue.create({
+        data: {
+          UserId: userId,
+          IssueId: newIssue.Id,
         },
         include: {
           User: true,
         },
       });
+
+      const newIssueWithUser = {
+        ...newIssue,
+        User: userIssue.User,
+      };
+
       const backlog = await prisma.backlog.findFirst({
         where: { BoardId: boardId },
       });
@@ -83,7 +91,7 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
           },
         },
       });
-      res.json(newIssue);
+      res.json(newIssueWithUser);
       return;
     }
 
@@ -100,36 +108,39 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
         .json({ message: "Column not found for the given board and status" });
       return;
     }
-    const newIssue = await prisma.issue
-      .create({
-        data: {
-          Summary: content,
-          ProjectKey: projectKey,
-          Status: status,
-          Key: cardKey,
-          Board: {
-            connect: { Id: boardId },
-          },
-          Project: {
-            connect: { Id: project.Id },
-          },
-          Column: {
-            connect: { Id: columnStatus.Id },
-          },
-          User: {
-            connect: {
-              Id: userId,
-            },
-          },
+    const newIssue = await prisma.issue.create({
+      data: {
+        Summary: content,
+        ProjectKey: projectKey,
+        Status: status,
+        Key: cardKey,
+        Board: {
+          connect: { Id: boardId },
         },
-        include: {
-          User: true,
+        Project: {
+          connect: { Id: project.Id },
         },
-      })
-      .catch((err) => {
-        console.error("Error creating issue:", err);
-        throw err;
-      });
+        Column: {
+          connect: { Id: columnStatus.Id },
+        },
+      },
+    });
+
+    const userIssue = await prisma.userIssue.create({
+      data: {
+        UserId: userId,
+        IssueId: newIssue.Id,
+      },
+      include: {
+        User: true,
+      },
+    });
+
+    const newIssueWithUser = {
+      ...newIssue,
+      User: userIssue.User,
+    };
+
     if (sprintId) {
       await prisma.sprint.update({
         where: { Id: sprintId },
@@ -140,7 +151,7 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
         },
       });
     }
-    res.json(newIssue);
+    res.json(newIssueWithUser);
   } catch (err) {
     res.status(500).json({
       message: "Error creating card",
@@ -159,13 +170,24 @@ export const getIssues = async (req: Request, res: Response): Promise<void> => {
     const issues = await prisma.issue.findMany({
       where: { BoardId: boardId as string },
       include: {
-        User: true,
+        UserIssues: {
+          include: {
+            User: {
+              select: {
+                Id: true,
+                Email: true,
+                FullName: true,
+                ProfilePicture: true,
+              },
+            },
+          },
+        },
       },
     });
     res.json(
       issues.map((issue) => ({
         ...issue,
-        createdBy: issue.User,
+        createdBy: issue.UserIssues?.[0]?.User,
       })),
     );
   } catch (error) {
