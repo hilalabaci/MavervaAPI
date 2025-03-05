@@ -54,7 +54,6 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
 
     await prisma.column.createMany({
       data: [
-        { Name: "Backlog", Status: 0, BoardId: newBoard.Id },
         { Name: "To Do", Status: 1, BoardId: newBoard.Id },
         { Name: "In Progress", Status: 2, BoardId: newBoard.Id },
         { Name: "Done", Status: 99, BoardId: newBoard.Id },
@@ -67,9 +66,9 @@ export const addBoard = async (req: Request, res: Response): Promise<void> => {
     });
     await prisma.sprint.create({
       data: {
-        Name: `${projectKeys[0]} Sprint 1`,
+        Name: `${newBoard.Key} Sprint 1`,
         BoardId: newBoard.Id,
-        IsActive: false,
+        IsActive: true,
         StartDate: new Date(),
         EndDate: new Date(new Date().setDate(new Date().getDate() + 14)), // Sprint ends in 2 weeks
       },
