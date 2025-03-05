@@ -403,9 +403,6 @@ export const deleteProject = async (
     }
 
     await prisma.$transaction([
-      prisma.userIssue.deleteMany({
-        where: { Issue: { Board: { ProjectId: projectId as string } } },
-      }),
       prisma.issue.deleteMany({ where: { ProjectId: projectId as string } }),
       prisma.backlog.deleteMany({
         where: { Board: { ProjectId: projectId as string } },

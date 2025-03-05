@@ -65,7 +65,22 @@ export const getSprints = async (
             Column: true,
             Label: true,
             Sprint: true,
-            UserIssues: true,
+            AssigneeUser: {
+              select: {
+                Id: true,
+                FullName: true,
+                Email: true,
+                ProfilePicture: true,
+              },
+            },
+            ReporterUser: {
+              select: {
+                Id: true,
+                FullName: true,
+                Email: true,
+                ProfilePicture: true,
+              },
+            },
           },
         },
       },

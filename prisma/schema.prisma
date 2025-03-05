@@ -12,7 +12,6 @@ model User {
   Email                 String                 @unique
   Password              String?
   FullName              String?
-  UserIssues            UserIssue[]
   UserProjects          UserProject[]
   SentNotifications     Notification[]         @relation(name: "SentNotifications")
   ReceivedNotifications Notification[]         @relation(name: "ReceivedNotifications")
@@ -21,6 +20,8 @@ model User {
   UserBoard             UserBoard[]
   ProfilePicture        String?
   UserFavoriteProject   UserFavouriteProject[]
+  ReportedIssues        Issue[]                @relation("Reporter")
+  AssignedIssues        Issue[]                @relation("Assignee")
 }
 
 model Project {
@@ -38,18 +39,18 @@ model Project {
 }
 
 model Board {
-  Id          String        @id @default(uuid())
-  Name        String
-  Key         String        @unique
-  ProjectId   String
-  LeadUserId  String
-  CreatedAt   DateTime      @default(now())
-  Backlog     Backlog?
-  Project     Project       @relation(fields: [ProjectId], references: [Id])
-  Columns     Column[]
-  Issues      Issue[]
-  Sprints     Sprint[]
-  UserBoards  UserBoard[]
+  Id         String      @id @default(uuid())
+  Name       String
+  Key        String      @unique
+  ProjectId  String
+  LeadUserId String
+  CreatedAt  DateTime    @default(now())
+  Backlog    Backlog?
+  Project    Project     @relation(fields: [ProjectId], references: [Id])
+  Columns    Column[]
+  Issues     Issue[]
+  Sprints    Sprint[]
+  UserBoards UserBoard[]
 }
 
 model Backlog {
@@ -81,28 +82,30 @@ model Column {
 }
 
 model Issue {
-  Id          String      @id @default(uuid())
-  Key         String      @unique
-  Summary     String
-  Description String?
-  Status      Int         @default(1)
-  Type        String      @default("Task")
-  CreatedAt   DateTime    @default(now())
-  ProjectId   String
-  UserId      String?
-  LabelId     String?
-  BoardId     String?
-  ColumnId    String?
-  BacklogId   String?
-  SprintId    String?
-  Backlog     Backlog?    @relation(fields: [BacklogId], references: [Id])
-  Board       Board?      @relation(fields: [BoardId], references: [Id])
-  Column      Column?     @relation(fields: [ColumnId], references: [Id])
-  Label       Label?      @relation(fields: [LabelId], references: [Id])
-  Project     Project     @relation(fields: [ProjectId], references: [Id])
-  Sprint      Sprint?     @relation(fields: [SprintId], references: [Id])
-  UserIssues  UserIssue[]
-  ProjectKey  String?
+  Id             String   @id @default(uuid())
+  Key            String   @unique
+  Summary        String
+  Description    String?
+  ReporterUserId String?
+  AssigneeUserId String?
+  Status         Int      @default(1)
+  Type           String   @default("Task")
+  CreatedAt      DateTime @default(now())
+  ProjectId      String
+  LabelId        String?
+  BoardId        String?
+  ColumnId       String?
+  BacklogId      String?
+  SprintId       String?
+  ReporterUser   User?    @relation("Reporter", fields: [ReporterUserId], references: [Id])
+  AssigneeUser   User?    @relation("Assignee", fields: [AssigneeUserId], references: [Id])
+  Backlog        Backlog? @relation(fields: [BacklogId], references: [Id])
+  Board          Board?   @relation(fields: [BoardId], references: [Id])
+  Column         Column?  @relation(fields: [ColumnId], references: [Id])
+  Label          Label?   @relation(fields: [LabelId], references: [Id])
+  Project        Project  @relation(fields: [ProjectId], references: [Id])
+  Sprint         Sprint?  @relation(fields: [SprintId], references: [Id])
+  ProjectKey     String?
 }
 
 model Label {
@@ -130,15 +133,6 @@ model UserBoard {
   Role      UserRole @default(Viewer)
 
   @@id([UserId, BoardId])
-}
-
-model UserIssue {
-  UserId  String
-  IssueId String
-  Issue   Issue  @relation(fields: [IssueId], references: [Id])
-  User    User   @relation(fields: [UserId], references: [Id])
-
-  @@id([UserId, IssueId])
 }
 
 model UserFavouriteProject {

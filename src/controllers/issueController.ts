@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 export const addIssue = async (req: Request, res: Response): Promise<void> => {
   try {
     const { content, projectKey, status, userId, boardId, sprintId } = req.body;
+
     const project = await prisma.project.findFirst({
       where: {
         Key: projectKey,
@@ -14,6 +15,7 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
         Boards: { some: { Id: boardId } },
       },
     });
+
     if (!project) {
       res.status(400).json({
         message: "Projects not found",
@@ -30,18 +32,17 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    let issueKeyNumber = 1; // Varsayılan değer
+    let issueKeyNumber = 1;
     if (existingIssues.length > 0) {
-      // Mevcut issue'ların Key'lerini al
       const issueNumbers = existingIssues.map((issue) => {
         const keyParts = issue.Key.split("-");
-        return parseInt(keyParts[keyParts.length - 1], 10); // Son kısımdaki numarayı al
+        return parseInt(keyParts[keyParts.length - 1], 10);
       });
 
-      // En büyük numarayı bul
-      issueKeyNumber = Math.max(...issueNumbers) + 1; // En büyük numaraya 1 ekle
+      issueKeyNumber = Math.max(...issueNumbers) + 1;
     }
     const cardKey = `${projectKey}-${issueKeyNumber}`;
+    console.log("cardKey:", cardKey);
 
     if (!sprintId) {
       const newIssue = await prisma.issue.create({
@@ -50,29 +51,11 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
           ProjectKey: projectKey,
           Status: status,
           Key: cardKey,
-          Board: {
-            connect: { Id: boardId },
-          },
-          Project: {
-            connect: { Id: project.Id },
-          },
+          BoardId: boardId,
+          ProjectId: project.Id,
+          ReporterUserId: userId,
         },
       });
-
-      const userIssue = await prisma.userIssue.create({
-        data: {
-          UserId: userId,
-          IssueId: newIssue.Id,
-        },
-        include: {
-          User: true,
-        },
-      });
-
-      const newIssueWithUser = {
-        ...newIssue,
-        User: userIssue.User,
-      };
 
       const backlog = await prisma.backlog.findFirst({
         where: { BoardId: boardId },
@@ -91,7 +74,7 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
           },
         },
       });
-      res.json(newIssueWithUser);
+      res.json(newIssue);
       return;
     }
 
@@ -114,32 +97,12 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
         ProjectKey: projectKey,
         Status: status,
         Key: cardKey,
-        Board: {
-          connect: { Id: boardId },
-        },
-        Project: {
-          connect: { Id: project.Id },
-        },
-        Column: {
-          connect: { Id: columnStatus.Id },
-        },
+        BoardId: boardId,
+        ProjectId: project.Id,
+        ColumnId: columnStatus.Id,
+        ReporterUserId: userId,
       },
     });
-
-    const userIssue = await prisma.userIssue.create({
-      data: {
-        UserId: userId,
-        IssueId: newIssue.Id,
-      },
-      include: {
-        User: true,
-      },
-    });
-
-    const newIssueWithUser = {
-      ...newIssue,
-      User: userIssue.User,
-    };
 
     if (sprintId) {
       await prisma.sprint.update({
@@ -151,7 +114,7 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
         },
       });
     }
-    res.json(newIssueWithUser);
+    res.json(newIssue);
   } catch (err) {
     res.status(500).json({
       message: "Error creating card",
@@ -170,26 +133,25 @@ export const getIssues = async (req: Request, res: Response): Promise<void> => {
     const issues = await prisma.issue.findMany({
       where: { BoardId: boardId as string },
       include: {
-        UserIssues: {
-          include: {
-            User: {
-              select: {
-                Id: true,
-                Email: true,
-                FullName: true,
-                ProfilePicture: true,
-              },
-            },
+        ReporterUser: {
+          select: {
+            Id: true,
+            FullName: true,
+            Email: true,
+            ProfilePicture: true,
+          },
+        },
+        AssigneeUser: {
+          select: {
+            Id: true,
+            FullName: true,
+            Email: true,
+            ProfilePicture: true,
           },
         },
       },
     });
-    res.json(
-      issues.map((issue) => ({
-        ...issue,
-        createdBy: issue.UserIssues?.[0]?.User,
-      })),
-    );
+    res.json(issues);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error fetching cards" });
@@ -286,9 +248,29 @@ export const deleteIssue = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { id } = req.query;
-
-    await prisma.issue.delete({ where: { Id: id as string } });
+    const { issueId } = req.query;
+    const { userId } = req.body;
+    const issue = await prisma.issue.findUnique({
+      where: { Id: issueId as string },
+      include: {
+        AssigneeUser: true,
+        Project: true,
+      },
+    });
+    if (!issue) {
+      res.status(404).json({ message: "Issue not found" });
+      return;
+    }
+    if (
+      issue.AssigneeUser?.Id !== userId &&
+      !["projectLead", "projectManager"].includes(issue.Project.LeadUserId)
+    ) {
+      res.status(403).json({
+        message: "You do not have permission to delete this issue",
+      });
+      return;
+    }
+    await prisma.issue.delete({ where: { Id: issueId as string } });
 
     res.sendStatus(200);
   } catch (error) {

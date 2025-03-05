@@ -21,41 +21,34 @@ export const getBacklog = async (
         Issues: {
           select: {
             Id: true,
-            UserIssues: {
-              include: {
-                User: {
-                  select: {
-                    Id: true,
-                    Email: true,
-                    FullName: true,
-                    ProfilePicture: true,
-                  },
-                },
-              },
-            },
             Label: true,
             Summary: true,
             Status: true,
             Key: true,
+            ReporterUser: {
+              select: {
+                Id: true,
+                FullName: true,
+                Email: true,
+                ProfilePicture: true,
+              },
+            },
+            AssigneeUser: {
+              select: {
+                Id: true,
+                FullName: true,
+                Email: true,
+                ProfilePicture: true,
+              },
+            },
           },
         },
       },
     });
     if (backlog) {
-      res.json(
-        backlog.Issues.map((issue) => ({
-          ...issue,
-          Users: issue.UserIssues.map((ui) => ui.User),
-        })),
-      );
+      res.json(backlog.Issues);
       return;
     }
-
-    // backlog = new Backlog({
-    //   boardId: boardId,
-    //   cardIds: [],
-    // });
-    // res.json([]);
     return;
   } catch (error) {
     console.error("Error fetching backlog:", error);
