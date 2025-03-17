@@ -1,6 +1,6 @@
-import { EmailTemplateEnum } from "models/EmailTemplate";
-
 //1. Create Interface for email service implementations
+
+import { EmailTemplateEnum } from "services/types";
 
 export interface IEmailService {
   send: (params: EmailSendParams) => Promise<boolean>;

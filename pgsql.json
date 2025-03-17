@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Maverva_AIVEN",
+      "Group": "Servers",
+      "Host": "maverva-maverva.k.aivencloud.com",
+      "Port": 13455,
+      "MaintenanceDB": "defaultdb",
+      "Username": "avnadmin",
+      "SSLMode": "require"
+    }
+  }
+}

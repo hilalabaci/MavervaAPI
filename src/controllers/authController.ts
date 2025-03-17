@@ -94,7 +94,7 @@ export const loginGoogle = async (
     res.status(200).json(user);
     return;
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({
       message: "Check your password or email",
     });
