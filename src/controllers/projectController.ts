@@ -385,7 +385,33 @@ export const deleteProject = async (
   try {
     const userProject = await prisma.userProject.findFirst({
       where: { ProjectId: projectId as string, UserId: userId as string },
-      include: { Project: true },
+      include: { Project: true, User: true },
+    });
+    const user = await prisma.user.findUnique({
+      where: { Id: userId as string },
+      select: {
+        Id: true,
+        FullName: true,
+        Email: true,
+        ProfilePicture: true,
+      },
+    });
+    const project = await prisma.project.findUnique({
+      where: { Id: projectId as string },
+      include: {
+        UserProjects: {
+          include: {
+            User: {
+              select: {
+                Id: true,
+                Email: true,
+                FullName: true,
+                ProfilePicture: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!userProject || !userProject.Project) {
@@ -424,6 +450,21 @@ export const deleteProject = async (
       prisma.project.delete({ where: { Id: projectId as string } }),
     ]);
 
+    if (project?.UserProjects && user) {
+      await Promise.all(
+        project.UserProjects.map((up) =>
+          prisma.notification.create({
+            data: {
+              ToUserId: up.User.Id,
+              FromUserId: user.Id,
+              Message: `${user.FullName} has deleted the ${project.Name} project you were a member of.`,
+              IsRead: false,
+              CreatedAt: new Date(),
+            },
+          }),
+        ),
+      );
+    }
     res.status(200).json({
       message: "Successfully deleted",
     });

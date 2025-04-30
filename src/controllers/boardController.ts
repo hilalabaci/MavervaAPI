@@ -199,7 +199,9 @@ export const addUserToBoard = async (
     // Check if the boards exist.
     const boards = await prisma.board.findMany({
       where: { Id: { in: boardIds }, ProjectId: projectId },
+      select: { Id: true, Name: true },
     });
+
     if (!boards.length) {
       res.status(400).json({
         message: "No boards found",
@@ -222,6 +224,7 @@ export const addUserToBoard = async (
     const project = await prisma.userProject.findFirst({
       where: { ProjectId: projectId, UserId: addedUser.Id },
     });
+
     if (!project) {
       await prisma.userProject.create({
         data: {
@@ -232,6 +235,27 @@ export const addUserToBoard = async (
       });
     }
 
+    const projectFind = await prisma.project.findUnique({
+      where: { Id: projectId },
+      select: { Name: true },
+    });
+    const user = await prisma.user.findUnique({
+      where: { Id: userId },
+      select: { FullName: true },
+    });
+    const boardNames = boards.map((b) => b.Name).join(", ");
+    const projectName = projectFind?.Name || "a project";
+
+    // Create a notification for the added user
+    await prisma.notification.create({
+      data: {
+        ToUserId: addedUser.Id,
+        FromUserId: userId,
+        Message: `You have been added as a ${role} to the ${boardNames} board of the ${projectName} project by ${user?.FullName}`,
+        IsRead: false,
+        CreatedAt: new Date(),
+      },
+    });
     res
       .status(200)
       .json({ message: "User successfully added to boards and project" });

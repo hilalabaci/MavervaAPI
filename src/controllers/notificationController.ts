@@ -11,7 +11,6 @@ export const getNotification = async (
       res.status(400).json({ message: "Invalid user ID" });
       return;
     }
-
     const notifications = await prisma.notification.findMany({
       where: { ToUserId: userId },
       include: {
