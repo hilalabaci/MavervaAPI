@@ -1,11 +1,11 @@
 import express, { Application } from "express";
 import expressWs from "express-ws";
 import cors from "cors";
-import { PrismaClient } from "@prisma/client";
 import apiRoutes from "./routes/apiRoutes";
+import { prisma } from "../src/utils/prisma"; // yolu senin proje yapına göre olabilir
+
 // import wsRoutes from "./routes/wsRoutes";
 
-const prisma = new PrismaClient();
 const wsInstance = expressWs(express());
 const app: Application = wsInstance.app;
 

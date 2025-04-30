@@ -1,9 +1,9 @@
 import { EmailTemplateEnum, PrismaClient } from "@prisma/client";
 import { EmailSendParams, IEmailService } from "./interfaces";
 import fetch from "node-fetch";
-const prisma = new PrismaClient();
 const { MAILGUN_API_URL, MAILGUN_API_KEY } = process.env;
 const MAILGUN_API_USERNAME = "api";
+import { prisma } from "../../utils/prisma";
 
 //2. implement email service
 export class MailgunEmailService implements IEmailService {

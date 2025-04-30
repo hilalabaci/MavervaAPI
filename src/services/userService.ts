@@ -1,6 +1,5 @@
 import { RegisterUserInput } from "./types";
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import { prisma } from "../utils/prisma";
 
 export const userService = {
   // getAll: async (): Promise<IUser[]> => {

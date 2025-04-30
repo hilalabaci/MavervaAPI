@@ -1,7 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../utils/prisma";
 
 export const getColumn = async (req: Request, res: Response): Promise<void> => {
   const boardId = req.query.boardId;

@@ -1,8 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
-import { Console } from "console";
-
-const prisma = new PrismaClient();
+import { prisma } from "../utils/prisma";
 
 export const addIssue = async (req: Request, res: Response): Promise<void> => {
   try {
