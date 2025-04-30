@@ -38,3 +38,22 @@
 //   .finally(async () => {
 //     await prisma.$disconnect();
 //   });
+// scripts/seed.ts
+import { prisma } from "../src/utils/prisma";
+
+async function main() {
+  await prisma.user.create({
+    data: {
+      FullName: "Hilal Abaci",
+      Email: "hilalabaci55@gmail.com",
+    },
+  });
+}
+
+main()
+  .then(() => prisma.$disconnect())
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
