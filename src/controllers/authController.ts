@@ -4,7 +4,7 @@ import { OAuth2Client } from "google-auth-library";
 import { EmailTemplateEnum } from "../services/types";
 import emailService from "../services/email";
 import { generateToken } from "./verifyToken";
-import { getGoogleUserInfo } from "../utils/google";
+import { getGoogleUserInfo, GoogleUserInfo } from "../utils/google";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
 export const login = async (req: Request, res: Response): Promise<void> => {
@@ -45,8 +45,8 @@ export const loginGoogle = async (
 ): Promise<void> => {
   try {
     const { authorization } = req.headers;
-    console.log("Authorization Header:", authorization);
-
+    const { oneTap } = req.query;
+    const isOneTap = oneTap === "true";
     if (!authorization || !authorization.startsWith("Bearer ")) {
       res.status(401).json({
         message: "Auth failed",
@@ -57,11 +57,45 @@ export const loginGoogle = async (
     const accessToken = authorization.split(" ")[1];
     console.log("Access Token:", accessToken);
     const client = new OAuth2Client({ clientId: GOOGLE_OAUTH_CLIENTID });
-    const tokenInfo = await client.getTokenInfo(accessToken);
 
-    const userInfo = await getGoogleUserInfo(accessToken);
+    let userInfo: GoogleUserInfo | undefined;
+    if (isOneTap) {
+      // Verify the token using the client
+      const ticket = await client.verifyIdToken({
+        idToken: accessToken,
+        audience: GOOGLE_OAUTH_CLIENTID,
+      });
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        res.status(401).json({
+          message: "Auth failed 1",
+        });
+        return;
+      }
+      userInfo = payload as GoogleUserInfo;
+    } else {
+      // Verify the token using the client
+      const tokenInfo = await client.getTokenInfo(accessToken);
 
-    if (!tokenInfo?.email_verified || !tokenInfo.email) {
+      if (!tokenInfo || !tokenInfo.email) {
+        res.status(401).json({
+          message: "Auth failed 1",
+        });
+        return;
+      }
+      if (!tokenInfo.email_verified) {
+        res.status(401).json({
+          message: "Email not verified",
+        });
+        return;
+      }
+
+      const googleUserInfo = await getGoogleUserInfo(accessToken);
+      console.log("googleUserInfo", googleUserInfo);
+      userInfo = googleUserInfo as GoogleUserInfo;
+    }
+
+    if (!userInfo?.email_verified || !userInfo?.email) {
       res.status(401).json({
         message: "Auth failed 2",
       });
@@ -69,18 +103,18 @@ export const loginGoogle = async (
       return;
     }
 
-    let user = await userService.getByEmail(tokenInfo.email);
+    let user = await userService.getByEmail(userInfo.email);
 
     if (!user) {
       user = await userService.register({
-        email: tokenInfo.email,
+        email: userInfo.email,
         fullName: userInfo.name ?? "",
         password: "",
         profilePicture: userInfo.picture,
       });
       await emailService.send({
         templateType: EmailTemplateEnum.Welcome,
-        to: tokenInfo.email,
+        to: userInfo.email,
         placeholders: {
           firstName: userInfo.name ?? "",
           loginURL: "",
