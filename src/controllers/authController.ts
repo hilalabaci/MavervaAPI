@@ -4,6 +4,7 @@ import { OAuth2Client } from "google-auth-library";
 import { EmailTemplateEnum } from "../services/types";
 import emailService from "../services/email";
 import { generateToken } from "./verifyToken";
+import { getGoogleUserInfo } from "../utils/google";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
 export const login = async (req: Request, res: Response): Promise<void> => {
@@ -53,14 +54,11 @@ export const loginGoogle = async (
     }
     const accessToken = authorization.split(" ")[1];
     const client = new OAuth2Client({ clientId: GOOGLE_OAUTH_CLIENTID });
-    const verifyResult = await client.verifyIdToken({
-      idToken: accessToken,
-      audience: GOOGLE_OAUTH_CLIENTID,
-    });
+    const tokenInfo = await client.getTokenInfo(accessToken);
 
-    const payload = verifyResult.getPayload();
+    const userInfo = await getGoogleUserInfo(accessToken);
 
-    if (!payload?.email_verified || !payload.email) {
+    if (!tokenInfo?.email_verified || !tokenInfo.email) {
       res.status(401).json({
         message: "Auth failed 2",
       });
@@ -68,28 +66,28 @@ export const loginGoogle = async (
       return;
     }
 
-    let user = await userService.getByEmail(payload.email);
+    let user = await userService.getByEmail(tokenInfo.email);
 
     if (!user) {
       user = await userService.register({
-        email: payload.email,
-        fullName: payload.name ?? "",
+        email: tokenInfo.email,
+        fullName: userInfo.name ?? "",
         password: "",
-        profilePicture: payload.picture,
+        profilePicture: userInfo.picture,
       });
       await emailService.send({
         templateType: EmailTemplateEnum.Welcome,
-        to: payload.email,
+        to: tokenInfo.email,
         placeholders: {
-          firstName: payload.name ?? "",
+          firstName: userInfo.name ?? "",
           loginURL: "",
           setUpProfileURL: "",
           startUpGuideURL: "",
         },
       });
     }
-    if (payload.picture && user.ProfilePicture !== payload.picture) {
-      await userService.updateProfilePicture(user.Id, payload.picture);
+    if (userInfo.picture && user.ProfilePicture !== userInfo.picture) {
+      await userService.updateProfilePicture(user.Id, userInfo.picture);
     }
     res.status(200).json(user);
     return;
