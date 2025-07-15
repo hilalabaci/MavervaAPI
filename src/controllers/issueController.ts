@@ -160,9 +160,9 @@ export const updateIssueContent = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { cardId, newContent } = req.body;
+    const { issueId, newContent } = req.body;
     const updatedIssue = await prisma.issue.update({
-      where: { Id: cardId },
+      where: { Id: issueId },
       data: { Summary: newContent },
     });
 
@@ -177,12 +177,21 @@ export const updateIssue = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { oldSprintId, newSprintId, cardId, boardId, status } = req.body;
+    let { oldSprintId, newSprintId, issueId, boardId, status } = req.body;
+    console.log(oldSprintId, newSprintId, issueId, boardId, status);
+    const issue = await prisma.issue.findUnique({
+      where: { Id: issueId },
+      include: {
+        Project: true,
+        AssigneeUser: true,
+        Sprint: true,
+      },
+    });
 
     // First, handle the case where only the status is being updated
     if (status && !oldSprintId && !newSprintId) {
       const updatedIssue = await prisma.issue.update({
-        where: { Id: cardId },
+        where: { Id: issueId },
         data: { Status: Number(status) },
       });
       res.json(updatedIssue);
@@ -195,11 +204,11 @@ export const updateIssue = async (
       // Move the issue from the old sprint to the new sprint
       await prisma.sprint.update({
         where: { Id: newSprintId },
-        data: { Issues: { connect: { Id: cardId } } },
+        data: { Issues: { connect: { Id: issueId } } },
       });
       await prisma.sprint.update({
         where: { Id: oldSprintId },
-        data: { Issues: { disconnect: { Id: cardId } } },
+        data: { Issues: { disconnect: { Id: issueId } } },
       });
     }
 
@@ -207,11 +216,11 @@ export const updateIssue = async (
     if (!newSprintId && oldSprintId) {
       await prisma.sprint.update({
         where: { Id: oldSprintId },
-        data: { Issues: { disconnect: { Id: cardId } } },
+        data: { Issues: { disconnect: { Id: issueId } } },
       });
       await prisma.backlog.update({
         where: { BoardId: boardId },
-        data: { Issues: { connect: { Id: cardId } } },
+        data: { Issues: { connect: { Id: issueId } } },
       });
     }
 
@@ -219,17 +228,17 @@ export const updateIssue = async (
     if (newSprintId && !oldSprintId) {
       await prisma.sprint.update({
         where: { Id: newSprintId },
-        data: { Issues: { connect: { Id: cardId } } },
+        data: { Issues: { connect: { Id: issueId } } },
       });
       await prisma.backlog.update({
         where: { BoardId: boardId },
-        data: { Issues: { disconnect: { Id: cardId } } },
+        data: { Issues: { disconnect: { Id: issueId } } },
       });
     }
 
     // Finally, update the status of the card after all the moves
     const updatedIssue = await prisma.issue.findUnique({
-      where: { Id: cardId },
+      where: { Id: issueId },
     });
 
     res.json(updatedIssue);
@@ -245,8 +254,8 @@ export const deleteIssue = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { issueId } = req.query;
-    const { userId } = req.body;
+    const { userId, issueId } = req.body;
+    console.log("deleteIssue", userId, issueId);
     const issue = await prisma.issue.findUnique({
       where: { Id: issueId as string },
       include: {

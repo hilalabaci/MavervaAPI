@@ -1,8 +1,8 @@
 import express, { Application } from "express";
 import expressWs from "express-ws";
 import cors from "cors";
-import apiRoutes from "./routes/apiRoutes";
-import { prisma } from "../src/utils/prisma"; // yolu senin proje yapına göre olabilir
+import routes from "./routes/";
+import { prisma } from "../src/utils/prisma";
 
 // import wsRoutes from "./routes/wsRoutes";
 
@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // Regular API Routes
-app.use("/", apiRoutes);
+app.use("/", routes);
 
 // WebSocket Routes
 // const ws = wsRoutes();

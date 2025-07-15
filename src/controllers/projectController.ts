@@ -162,7 +162,17 @@ export const getProjects = async (
             },
           },
         },
-        Boards: true,
+        Boards: {
+          select: {
+            Id: true,
+            Sprints: {
+              where: { IsActive: true },
+              select: {
+                Id: true,
+              },
+            },
+          },
+        },
         LeadUser: {
           select: {
             Id: true,

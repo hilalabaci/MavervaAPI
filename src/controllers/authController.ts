@@ -45,6 +45,8 @@ export const loginGoogle = async (
 ): Promise<void> => {
   try {
     const { authorization } = req.headers;
+    console.log("Authorization Header:", authorization);
+
     if (!authorization || !authorization.startsWith("Bearer ")) {
       res.status(401).json({
         message: "Auth failed",
@@ -53,6 +55,7 @@ export const loginGoogle = async (
       return;
     }
     const accessToken = authorization.split(" ")[1];
+    console.log("Access Token:", accessToken);
     const client = new OAuth2Client({ clientId: GOOGLE_OAUTH_CLIENTID });
     const tokenInfo = await client.getTokenInfo(accessToken);
 

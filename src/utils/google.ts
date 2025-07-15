@@ -11,7 +11,9 @@ interface GoogleUserInfo {
   locale?: string;
 }
 
-export async function getGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
+export async function getGoogleUserInfo(
+  accessToken: string,
+): Promise<GoogleUserInfo> {
   const response = await fetch(
     "https://www.googleapis.com/oauth2/v3/userinfo",
     {

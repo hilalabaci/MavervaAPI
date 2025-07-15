@@ -53,7 +53,7 @@ export const getSprints = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const boardId = req.query.boardId;
+  const { boardId, projectKey } = req.query;
   if (!boardId) {
     res.status(400).json({ message: "BoardId is required" });
     return;

@@ -6,6 +6,6 @@ dotenv.config();
 export const config = {
   port: process.env.PORT || 3000,
   dbUri: process.env.DB_URI || "",
-  jwtSecret: process.env.JWT_SECRET || "",
+  jwtSecret: process.env.JWT_SECRET || "fallback_secret",
   version: process.env.VERSION || "1.0.0",
 };

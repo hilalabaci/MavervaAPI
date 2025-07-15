@@ -1,24 +1,40 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import jwt, {
+  JsonWebTokenError,
+  JwtPayload,
+  TokenExpiredError,
+} from "jsonwebtoken";
 import { config } from "../config";
 
+interface AuthenticatedRequest extends Request {
+  user?: string | JwtPayload;
+}
+
 export const authMiddleware = (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction,
 ): void => {
-  const token = req.header("Authorization")?.replace("Bearer ", "");
+  const authHeader = req.header("Authorization");
 
-  if (!token) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
+  const token = authHeader.substring(7);
+
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    (req as any).user = decoded; // Attach user data to request
+    req.user = decoded;
     next();
-  } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
+  } catch (error) {
+    if (error instanceof TokenExpiredError) {
+      res.status(401).json({ error: "Token expired" });
+    } else if (error instanceof JsonWebTokenError) {
+      res.status(401).json;
+    }
+    console.error("JWT verification error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
