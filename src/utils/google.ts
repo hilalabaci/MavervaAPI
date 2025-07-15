@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 
-interface GoogleUserInfo {
+export interface GoogleUserInfo {
   sub: string;
   name: string;
   given_name: string;
