@@ -146,6 +146,14 @@ export const getIssues = async (req: Request, res: Response): Promise<void> => {
             ProfilePicture: true,
           },
         },
+        Sprint: {
+          select: {
+            Id: true,
+            Name: true,
+            StartDate: true, 
+            EndDate: true,
+          },
+        },
       },
     });
     res.json(issues);

@@ -8,14 +8,6 @@ import {
 } from "../controllers/issueController";
 
 const router = Router({ mergeParams: true });
-// routes/
-// ├── apiRoute.ts               <-- Hepsini burada topluyoruz
-// ├── project.routes.ts         <-- /projects
-// ├── board.routes.ts           <-- /projects/:projectKey/boards
-// ├── sprint.routes.ts          <-- /boards/:boardId/sprints
-// ├── column.routes.ts          <-- /sprints/:sprintId/columns
-// └── issue.routes.ts           <-- /sprints/:sprintId/issues
-//frontend route:/projects/:projectKey/boards/:boardId/sprints/:sprintId/issues
 
 router.post("/", addIssue);
 router.get("/", getIssues);

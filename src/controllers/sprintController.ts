@@ -4,6 +4,7 @@ import { prisma } from "../utils/prisma";
 export const addSprint = async (req: Request, res: Response): Promise<void> => {
   try {
     const { boardId, userId } = req.body;
+    console.log("addSprint", boardId, userId);
 
     const board = await prisma.board.findFirst({
       where: {

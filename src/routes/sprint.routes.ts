@@ -24,6 +24,5 @@ router.get("/active", getActiveSprint);//router.get("/projects/:projectKey/board
 
 // Nested columns and issues
 router.use("/:sprintId/columns", columnRoutes);
-router.use("/:sprintId/issues", issueRoutes);
 
 export default router;

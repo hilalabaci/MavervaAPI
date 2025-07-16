@@ -4,15 +4,16 @@ import authRoutes from "./auth.routes";
 import projectRoutes from "./project.routes";
 import notificationRoutes from "./notification.routes";
 import userRoutes from "./user.routes";
+import issueRoutes from "./issue.routes";
 
 const router = Router();
 // routes/
-// ├── apiRoute.ts               <-- Hepsini burada topluyoruz
-// ├── project.routes.ts         <-- /projects
-// ├── board.routes.ts           <-- /projects/:projectKey/boards
-// ├── sprint.routes.ts          <-- /boards/:boardId/sprints
-// ├── column.routes.ts          <-- /sprints/:sprintId/columns
-// └── issue.routes.ts           <-- /sprints/:sprintId/issues
+// ├── apiRoute.ts           <-- Tüm route'lar burada birleşiyor
+// ├── project.routes.ts     <-- /projects
+// ├── board.routes.ts       <-- /projects/:projectKey/boards
+// ├── sprint.routes.ts      <-- /boards/:boardId/sprints
+// ├── column.routes.ts      <-- /sprints/:sprintId/columns
+// └── issue.routes.ts       <-- /issues
 
 // Projeler	/projects
 // Projedeki board'lar	/projects/:projectKey/boards
@@ -24,5 +25,6 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/projects", projectRoutes);
+router.use("/issues", issueRoutes);
 
 export default router;

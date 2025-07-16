@@ -180,7 +180,7 @@ export const addUserToBoard = async (
     });
 
     if (!addedUser) {
-      res.status(400).json({
+      res.status(400).json({ 
         message: " Added User not found",
       });
       return;
