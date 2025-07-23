@@ -7,7 +7,6 @@ import {
   updateProjectTitle,
   updateProjectToFavorite,
 } from "../controllers/projectController";
-import { addUserToBoard } from "controllers/boardController";
 import boardRoutes from "./board.routes";
 
 const router = Router();

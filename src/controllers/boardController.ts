@@ -180,7 +180,7 @@ export const addUserToBoard = async (
     });
 
     if (!addedUser) {
-      res.status(400).json({ 
+      res.status(400).json({
         message: " Added User not found",
       });
       return;
@@ -296,7 +296,14 @@ export const getUsersToBoard = async (
           select: {
             UserBoards: {
               include: {
-                User: true,
+                User: {
+                  select: {
+                    Id: true,
+                    Email: true,
+                    FullName: true,
+                    ProfilePicture: true,
+                  },
+                },
               },
             },
           },

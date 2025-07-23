@@ -150,7 +150,7 @@ export const getIssues = async (req: Request, res: Response): Promise<void> => {
           select: {
             Id: true,
             Name: true,
-            StartDate: true, 
+            StartDate: true,
             EndDate: true,
           },
         },
@@ -168,10 +168,10 @@ export const updateIssueContent = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { issueId, newContent } = req.body;
+    const { issueId, newSummary, newDescription } = req.body;
     const updatedIssue = await prisma.issue.update({
       where: { Id: issueId },
-      data: { Summary: newContent },
+      data: { Summary: newSummary, Description: newDescription },
     });
 
     res.json(updatedIssue);
@@ -186,7 +186,6 @@ export const updateIssue = async (
 ): Promise<void> => {
   try {
     let { oldSprintId, newSprintId, issueId, boardId, status } = req.body;
-    console.log(oldSprintId, newSprintId, issueId, boardId, status);
     const issue = await prisma.issue.findUnique({
       where: { Id: issueId },
       include: {

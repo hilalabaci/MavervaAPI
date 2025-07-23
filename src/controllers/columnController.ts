@@ -8,7 +8,9 @@ export const getColumn = async (req: Request, res: Response): Promise<void> => {
       where: {
         BoardId: boardId as string,
       },
-      include: { Issues: true },
+      include: {
+        Issues: { select: { Id: true, Summary: true, Status: true } },
+      },
     });
     res.json(columns);
   } catch (error) {
@@ -83,18 +85,13 @@ export const deleteColumn = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { columnId } = req.query;
-    const userId = req.body.userId;
+    const { projectKey, boardId, sprintId, columnId } = req.params;
+    const { userId } = req.body;
 
-    const column = await prisma.column.findUnique({
-      where: { Id: columnId as string },
-    });
-    if (!column) {
+    if (!columnId || !boardId || !userId) {
       res.status(404).json({ message: "Column not found" });
       return;
     }
-
-    const boardId = column.BoardId;
 
     const userBoard = await prisma.userBoard.findFirst({
       where: { UserId: userId, BoardId: boardId, Role: "Admin" },
@@ -105,13 +102,21 @@ export const deleteColumn = async (
         .json({ message: "You do not have permission to delete columns" });
       return;
     }
-
-    const columnStatus = column?.Status;
+    const column = await prisma.column.findUnique({
+      where: { Id: columnId as string },
+    });
 
     const updatedCards = await prisma.issue.updateMany({
-      where: { Status: columnStatus, BoardId: boardId },
-      data: { Status: 0 },
+      where: {
+        ColumnId: columnId,
+        BoardId: boardId,
+      },
+      data: {
+        Status: 0,
+        ColumnId: null,
+      },
     });
+
     await prisma.column.delete({ where: { Id: columnId as string } });
     res
       .status(200)

@@ -391,7 +391,7 @@ export const deleteProject = async (
   res: Response,
 ): Promise<void> => {
   const { projectId, userId } = req.query;
-  console.log(`projectId:`, projectId, "userId:", userId);
+
   try {
     const userProject = await prisma.userProject.findFirst({
       where: { ProjectId: projectId as string, UserId: userId as string },

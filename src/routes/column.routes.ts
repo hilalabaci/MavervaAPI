@@ -16,6 +16,6 @@ const router = Router({ mergeParams: true });
 
 router.get("/", getColumn);
 router.post("/", addColumn);
-router.delete("/", deleteColumn);
+router.delete("/:columnId", deleteColumn);
 
 export default router;

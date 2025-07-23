@@ -68,7 +68,7 @@ export const getSprints = async (
       include: {
         Issues: {
           include: {
-            Backlog: true,
+            Backlog: { select: { Id: true, Issues: true } },
             Board: true,
             Column: true,
             Label: true,

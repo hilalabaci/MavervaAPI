@@ -2,6 +2,7 @@ import { Router } from "express";
 import homeRoutes from "./home.routes";
 import authRoutes from "./auth.routes";
 import projectRoutes from "./project.routes";
+import projectKeyRoutes from "./projectKey.routes";
 import notificationRoutes from "./notification.routes";
 import userRoutes from "./user.routes";
 import issueRoutes from "./issue.routes";
@@ -25,6 +26,7 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/projects", projectRoutes);
+router.use("/createProjectKey", projectKeyRoutes);
 router.use("/issues", issueRoutes);
 
 export default router;

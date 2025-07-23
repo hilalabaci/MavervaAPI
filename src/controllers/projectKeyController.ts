@@ -6,13 +6,15 @@ export const createProjectKey = async (
   res: Response,
 ): Promise<void> => {
   try {
+    //projectKey olusurken hata veriyor cunku ayni key ile baslayan seylerde
     const title = req.query.title as string | undefined;
     let newProjectKey = "";
     if (!title) {
-      res.status(400).json({ message: "title not send" });
+      res.status(400).json({ message: "Project key is required." });
       return;
     }
     const chars = title.split(" ") ?? ["Undefined"];
+    console.log("chars", chars);
     if (chars.length === 1) {
       newProjectKey = (
         (chars?.[0]?.[0] ?? "") +
@@ -28,6 +30,7 @@ export const createProjectKey = async (
       }
       newProjectKey = newKey.toUpperCase();
     }
+    console.log("newProjectKey", newProjectKey);
 
     let isKeyUnique = false;
     let uniqueKey = newProjectKey;
