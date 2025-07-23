@@ -142,6 +142,10 @@ export const getBoards = async (req: Request, res: Response): Promise<void> => {
             User: { select: { Id: true, Email: true, FullName: true } },
           },
         },
+        Sprints: {
+          where: { IsActive: true },
+          select: { Id: true },
+        },
       },
     });
 
@@ -165,7 +169,12 @@ export const addUserToBoard = async (
 ): Promise<void> => {
   try {
     const { projectId, boardIds, email, userId, role } = req.body;
-
+    if (!projectId || !boardIds || !email || !userId || !role) {
+      res.status(400).json({
+        message: "ProjectId, BoardIds, Email, UserId and Role are required",
+      });
+      return;
+    }
     const addedUser = await prisma.user.findFirst({
       where: { Email: email },
     });
@@ -270,7 +279,7 @@ export const addUserToBoard = async (
 };
 
 // GET USERS FROM BOARD
-export const getUsersBoards = async (
+export const getUsersToBoard = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
@@ -287,7 +296,14 @@ export const getUsersBoards = async (
           select: {
             UserBoards: {
               include: {
-                User: true,
+                User: {
+                  select: {
+                    Id: true,
+                    Email: true,
+                    FullName: true,
+                    ProfilePicture: true,
+                  },
+                },
               },
             },
           },

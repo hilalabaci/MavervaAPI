@@ -162,7 +162,17 @@ export const getProjects = async (
             },
           },
         },
-        Boards: true,
+        Boards: {
+          select: {
+            Id: true,
+            Sprints: {
+              where: { IsActive: true },
+              select: {
+                Id: true,
+              },
+            },
+          },
+        },
         LeadUser: {
           select: {
             Id: true,
@@ -381,7 +391,7 @@ export const deleteProject = async (
   res: Response,
 ): Promise<void> => {
   const { projectId, userId } = req.query;
-  console.log(`projectId:`, projectId, "userId:", userId);
+
   try {
     const userProject = await prisma.userProject.findFirst({
       where: { ProjectId: projectId as string, UserId: userId as string },

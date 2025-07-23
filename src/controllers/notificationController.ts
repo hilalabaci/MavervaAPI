@@ -36,17 +36,24 @@ export const markReadNotification = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { unReadNotificationIds } = req.body;
+    const { unReadNotificationIds, userId } = req.body;
     if (!unReadNotificationIds?.length) {
       res.status(400).json({ message: "Invalid request" });
       return;
     }
     console.log("notificationIds", unReadNotificationIds);
 
-    await prisma.notification.updateMany({
+    const readNoti = await prisma.notification.updateMany({
       where: { Id: { in: unReadNotificationIds } },
       data: { IsRead: true },
     });
+    const allNotifications = await prisma.notification.findMany({
+      where: {
+        ToUserId: userId,
+      },
+      select: { Id: true, IsRead: true },
+    });
+    console.log("markReadNotification", allNotifications);
     res.status(200).json({ message: "Notifications marked as read" });
   } catch (error) {
     console.error("Error marking notifications as read:", error);

@@ -4,6 +4,7 @@ import { prisma } from "../utils/prisma";
 export const addSprint = async (req: Request, res: Response): Promise<void> => {
   try {
     const { boardId, userId } = req.body;
+    console.log("addSprint", boardId, userId);
 
     const board = await prisma.board.findFirst({
       where: {
@@ -53,7 +54,7 @@ export const getSprints = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const boardId = req.query.boardId;
+  const { boardId, projectKey } = req.query;
   if (!boardId) {
     res.status(400).json({ message: "BoardId is required" });
     return;
@@ -67,7 +68,7 @@ export const getSprints = async (
       include: {
         Issues: {
           include: {
-            Backlog: true,
+            Backlog: { select: { Id: true, Issues: true } },
             Board: true,
             Column: true,
             Label: true,
