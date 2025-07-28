@@ -126,7 +126,12 @@ export const loginGoogle = async (
     if (userInfo.picture && user.ProfilePicture !== userInfo.picture) {
       await userService.updateProfilePicture(user.Id, userInfo.picture);
     }
-    res.status(200).json(user);
+    res
+      .status(200)
+      .json({
+        user,
+        token: generateToken({ id: user.Id?.toString(), email: user.Email }),
+      });
     return;
   } catch (error) {
     console.error(error);

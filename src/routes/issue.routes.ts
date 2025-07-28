@@ -11,8 +11,8 @@ const router = Router({ mergeParams: true });
 
 router.post("/", addIssue);
 router.get("/", getIssues);
-router.delete("/:issueId", deleteIssue);//router.delete("/issue", deleteIssue);
-router.put("/:issueId", updateIssue);//router.put("/issue", updateIssue);
-router.put("/:issueId/content", updateIssueContent);//router.put("/issue/content", updateIssueContent);
+router.delete("/:issueId", deleteIssue);
+router.put("/:issueId", updateIssue);
+router.put("/:issueId/content", updateIssueContent);
 
 export default router;

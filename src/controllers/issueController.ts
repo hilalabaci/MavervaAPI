@@ -172,6 +172,32 @@ export const updateIssueContent = async (
     const updatedIssue = await prisma.issue.update({
       where: { Id: issueId },
       data: { Summary: newSummary, Description: newDescription },
+      include: {
+        ReporterUser: {
+          select: {
+            Id: true,
+            FullName: true,
+            Email: true,
+            ProfilePicture: true,
+          },
+        },
+        AssigneeUser: {
+          select: {
+            Id: true,
+            FullName: true,
+            Email: true,
+            ProfilePicture: true,
+          },
+        },
+        Sprint: {
+          select: {
+            Id: true,
+            Name: true,
+            StartDate: true,
+            EndDate: true,
+          },
+        },
+      },
     });
 
     res.json(updatedIssue);
