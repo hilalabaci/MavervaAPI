@@ -3,6 +3,9 @@ import expressWs from "express-ws";
 import cors from "cors";
 import routes from "./routes/";
 import { prisma } from "../src/utils/prisma";
+import logger from "utils/logger";
+import requestLogger from "./middlewares/requestLogger";
+import { request } from "http";
 
 // import wsRoutes from "./routes/wsRoutes";
 
@@ -13,6 +16,7 @@ const app: Application = wsInstance.app;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+app.use(requestLogger);
 
 // Regular API Routes
 app.use("/", routes);

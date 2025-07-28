@@ -41,8 +41,6 @@ export const markReadNotification = async (
       res.status(400).json({ message: "Invalid request" });
       return;
     }
-    console.log("notificationIds", unReadNotificationIds);
-
     const readNoti = await prisma.notification.updateMany({
       where: { Id: { in: unReadNotificationIds } },
       data: { IsRead: true },
@@ -53,10 +51,8 @@ export const markReadNotification = async (
       },
       select: { Id: true, IsRead: true },
     });
-    console.log("markReadNotification", allNotifications);
     res.status(200).json({ message: "Notifications marked as read" });
   } catch (error) {
-    console.error("Error marking notifications as read:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

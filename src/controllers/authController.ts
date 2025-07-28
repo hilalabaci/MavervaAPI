@@ -55,7 +55,6 @@ export const loginGoogle = async (
       return;
     }
     const accessToken = authorization.split(" ")[1];
-    console.log("Access Token:", accessToken);
     const client = new OAuth2Client({ clientId: GOOGLE_OAUTH_CLIENTID });
 
     let userInfo: GoogleUserInfo | undefined;
@@ -91,7 +90,6 @@ export const loginGoogle = async (
       }
 
       const googleUserInfo = await getGoogleUserInfo(accessToken);
-      console.log("googleUserInfo", googleUserInfo);
       userInfo = googleUserInfo as GoogleUserInfo;
     }
 

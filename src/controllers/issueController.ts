@@ -39,7 +39,6 @@ export const addIssue = async (req: Request, res: Response): Promise<void> => {
       issueKeyNumber = Math.max(...issueNumbers) + 1;
     }
     const cardKey = `${projectKey}-${issueKeyNumber}`;
-    console.log("cardKey:", cardKey);
 
     if (!sprintId) {
       const newIssue = await prisma.issue.create({
@@ -288,7 +287,10 @@ export const deleteIssue = async (
 ): Promise<void> => {
   try {
     const { userId, issueId } = req.body;
-    console.log("deleteIssue", userId, issueId);
+    if (!userId) {
+      res.status(400).json({ message: "userId is required" });
+      return;
+    }
     const issue = await prisma.issue.findUnique({
       where: { Id: issueId as string },
       include: {
@@ -296,12 +298,13 @@ export const deleteIssue = async (
         Project: true,
       },
     });
+
     if (!issue) {
       res.status(404).json({ message: "Issue not found" });
       return;
     }
     if (
-      issue.AssigneeUser?.Id !== userId &&
+      issue.ReporterUserId !== userId &&
       !["projectLead", "projectManager"].includes(issue.Project.LeadUserId)
     ) {
       res.status(403).json({

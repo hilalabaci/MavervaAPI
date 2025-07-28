@@ -12,6 +12,13 @@
 /build
 /dist
 
+# Logs 
+logs/
+*.log
+logfile*
+debug.log
+error.log
+
 # misc
 .DS_Store
 

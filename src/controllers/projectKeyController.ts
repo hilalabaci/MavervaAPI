@@ -14,7 +14,6 @@ export const createProjectKey = async (
       return;
     }
     const chars = title.split(" ") ?? ["Undefined"];
-    console.log("chars", chars);
     if (chars.length === 1) {
       newProjectKey = (
         (chars?.[0]?.[0] ?? "") +
@@ -30,8 +29,6 @@ export const createProjectKey = async (
       }
       newProjectKey = newKey.toUpperCase();
     }
-    console.log("newProjectKey", newProjectKey);
-
     let isKeyUnique = false;
     let uniqueKey = newProjectKey;
     let suffix = 1;
