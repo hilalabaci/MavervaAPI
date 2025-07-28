@@ -28,7 +28,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       to: req.body.email,
       placeholders: {
         firstName: `${user.FullName}`,
-        verifyURL: `https://maverva.hilalabaci.com/login/verify-email?token=${token}`,
+        verifyURL: `https://maverva.com/login/verify-email?token=${token}`,
       },
     });
     res.json(user);
