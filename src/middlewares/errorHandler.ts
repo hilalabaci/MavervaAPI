@@ -15,3 +15,4 @@ export const errorHandler = (
     // message: err.message, // dev için açılabilir
   });
 };
+export default errorHandler;
