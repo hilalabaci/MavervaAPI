@@ -1,4 +1,3 @@
-import { EmailTemplateEnum, PrismaClient } from "@prisma/client";
 import { EmailSendParams, IEmailService } from "./interfaces";
 import fetch from "node-fetch";
 const { MAILGUN_API_URL, MAILGUN_API_KEY } = process.env;
@@ -12,7 +11,7 @@ export class MailgunEmailService implements IEmailService {
 
     const template = await prisma.emailTemplate.findFirst({
       where: {
-        Type: EmailTemplateEnum.VerifyEmail, // Enum değerini kullanıyoruz
+        Type: params.templateType,
       },
     });
 

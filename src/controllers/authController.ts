@@ -1,43 +1,20 @@
 import { Request, Response } from "express";
+import { prisma } from "../utils/prisma";
 import { userService } from "../services/userService";
 import { OAuth2Client } from "google-auth-library";
-import { EmailTemplateEnum } from "../services/types";
 import emailService from "../services/email";
 import { generateToken } from "./verifyToken";
 import { getGoogleUserInfo, GoogleUserInfo } from "../utils/google";
+import { generateOtp } from "../utils/generateOtp";
+import { EmailTemplateEnum } from "@prisma/client";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
-export const login = async (req: Request, res: Response): Promise<void> => {
-  try {
-    let user = await userService.getByEmail(req.body.email);
 
-    if (user === null) {
-      res.status(400).json({
-        message: "Check your password or email",
-      });
-      return;
-    }
-    const userPayload = {
-      id: user.Id?.toString(),
-      email: user.Email.toString(),
-    };
-    const token = generateToken(userPayload, "2h");
-
-    await emailService.send({
-      templateType: EmailTemplateEnum.VerifyEmail,
-      to: req.body.email,
-      placeholders: {
-        firstName: `${user.FullName}`,
-        verifyURL: `https://maverva.com/login/verify-email?token=${token}`,
-      },
-    });
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({
-      message: "",
-    });
-  }
-};
+/**
+ * Handles Google login for users.
+ * It verifies the user's token and retrieves their information.
+ * If the user does not exist, it registers them and sends a welcome email.
+ */
 
 export const loginGoogle = async (
   req: Request,
@@ -124,17 +101,180 @@ export const loginGoogle = async (
     if (userInfo.picture && user.ProfilePicture !== userInfo.picture) {
       await userService.updateProfilePicture(user.Id, userInfo.picture);
     }
-    res
-      .status(200)
-      .json({
-        user,
-        token: generateToken({ id: user.Id?.toString(), email: user.Email }),
-      });
+    res.status(200).json({
+      user,
+      token: generateToken({ id: user.Id?.toString(), email: user.Email }),
+    });
     return;
   } catch (error) {
     console.error(error);
     res.status(500).json({
       message: "Check your password or email",
+    });
+  }
+};
+
+/**
+ * Handles user login or registration.
+ * If the user is registering, it sends an OTP to the provided email.
+ * If the user is logging in, it checks if the user exists and sends a verification email.
+ */
+export const login = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, mode } = req.body;
+    let user = await userService.getByEmail(email);
+    if (mode === "register") {
+      if (user) {
+        res.status(409).json({
+          ok: false,
+          message: "Account already exists. Please log in.",
+        });
+        return;
+      }
+      const otpCode = generateOtp();
+      await prisma.otpCode.create({
+        data: {
+          Email: email,
+          Code: otpCode,
+          ExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      });
+
+      await emailService.send({
+        templateType: EmailTemplateEnum.SendOtp,
+        to: email,
+        placeholders: {
+          otpCode: otpCode.toString(),
+        },
+      });
+      console.log("Verification email sent to:", email, otpCode);
+      res.status(200).json({
+        ok: email,
+        message: "Verification email sent to register address.",
+      });
+      return;
+    }
+    if (user === null) {
+      res.status(200).json({
+        ok: false,
+        message: "We couldn't find your account. Please sign up to continue",
+      });
+      return;
+    }
+    const userPayload = {
+      id: user.Id?.toString(),
+      email: user.Email.toString(),
+    };
+    const token = generateToken(userPayload, "2h");
+
+    await emailService.send({
+      templateType: EmailTemplateEnum.SetPassword,
+      to: req.body.email,
+      placeholders: {
+        email: `${user.Email}`,
+        verifyURL: `https://maverva.com/login/verify-email?token=${token}`,
+      },
+    });
+    res.status(200).json({
+      ok: true,
+      data: { ...user, Token: token },
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: "Internal server error.",
+    });
+  }
+};
+
+export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, otpCode } = req.body;
+    const otpRecord = await prisma.otpCode.findFirst({
+      where: {
+        Email: email,
+        Code: otpCode.toString(),
+      },
+    });
+    if (!otpRecord) {
+      res.status(400).json({
+        ok: false,
+        message: "Invalid or expired OTP code.",
+      });
+      return;
+    }
+    let user = await userService.getByEmail(email);
+    if (!user) return;
+    await emailService.send({
+      templateType: EmailTemplateEnum.Welcome,
+      to: email,
+      placeholders: {
+        firstName: user.FullName ?? "",
+        loginURL: "https://maverva.com/login",
+        setUpProfileURL: "https://maverva.com/setup-profile",
+        startUpGuideURL: "https://maverva.com/start-guide",
+      },
+    });
+
+    await prisma.otpCode.delete({
+      where: {
+        Id: otpRecord.Id,
+      },
+    });
+    const token = generateToken({ id: user.Id, email: user.Email }, "2h");
+
+    res.status(200).json({
+      ok: true,
+      token,
+      user,
+    });
+  } catch (error) {
+    console.error(
+      "Invalid or expired verification code. Please try again.",
+      error,
+    );
+    res.status(500).json({
+      message: "Invalid or expired verification code. Please try again.",
+      error: (error as Error).message,
+    });
+  }
+};
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+    let user = await userService.getByEmail(email);
+    if (!user) {
+      res.status(404).json({ ok: false, message: "User not found" });
+      return;
+    }
+    const token = generateToken({ id: user.Id, email: user.Email }, "2h");
+    const continueUrl = encodeURIComponent(
+      "https://maverva.com/reset-password",
+    );
+    const verifyLink = `https://maverva.com/login/resetpassword/link?token=${token}&continue=${continueUrl}`;
+
+    await emailService.send({
+      templateType: EmailTemplateEnum.SetPassword,
+      to: email,
+      placeholders: {
+        email: email,
+        verifyURL: verifyLink,
+        loginURL: "https://maverva.com/login",
+        setUpProfileURL: "https://maverva.com/setup-profile",
+        startUpGuideURL: "https://maverva.com/start-guide",
+      },
+    });
+    res.status(200).json({
+      ok: true,
+      message: "Reset password email sent",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong. Please try again.",
+      error: (error as Error).message,
     });
   }
 };

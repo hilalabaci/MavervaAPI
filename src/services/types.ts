@@ -4,8 +4,3 @@ export interface RegisterUserInput {
   password: string;
   profilePicture?: string;
 }
-
-export enum EmailTemplateEnum {
-  Welcome = 1,
-  VerifyEmail = 2,
-}

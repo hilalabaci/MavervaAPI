@@ -85,7 +85,7 @@ export const deleteColumn = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { projectKey, boardId, sprintId, columnId } = req.params;
+    const { boardId, columnId } = req.params;
     const { userId } = req.body;
 
     if (!columnId || !boardId || !userId) {
@@ -102,9 +102,9 @@ export const deleteColumn = async (
         .json({ message: "You do not have permission to delete columns" });
       return;
     }
-    const column = await prisma.column.findUnique({
-      where: { Id: columnId as string },
-    });
+    // const column = await prisma.column.findUnique({
+    //   where: { Id: columnId as string },
+    // });
 
     const updatedCards = await prisma.issue.updateMany({
       where: {
@@ -118,10 +118,7 @@ export const deleteColumn = async (
     });
 
     await prisma.column.delete({ where: { Id: columnId as string } });
-    res
-      .status(200)
-      .json({ message: "Column deleted", updatedCards })
-      .send(updatedCards);
+    res.status(200).send({ message: "Column deleted", updatedCards });
   } catch (error) {
     console.error("Error deleting column:", error);
     res.status(500).send("Internal server error");

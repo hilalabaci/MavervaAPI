@@ -314,7 +314,7 @@ export const deleteIssue = async (
     }
     await prisma.issue.delete({ where: { Id: issueId as string } });
 
-    res.sendStatus(200);
+    res.status(200).json({ message: "Issue deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting card", error });
   }

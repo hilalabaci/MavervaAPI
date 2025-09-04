@@ -169,11 +169,20 @@ model EmailTemplate {
 
 enum EmailTemplateEnum {
   Welcome
-  VerifyEmail
+  SendOtp
+  SetPassword
 }
 
 enum UserRole {
   Admin
   Member
   Viewer
+}
+
+model OtpCode {
+  Id        String   @id @default(uuid())
+  Email     String
+  Code      String
+  ExpiresAt DateTime
+  Used      Boolean  @default(false)
 }
