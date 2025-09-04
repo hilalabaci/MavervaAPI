@@ -284,9 +284,14 @@ export const resetPassword = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { email, password, token } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    console.log(`email: ${email}, password: ${password}, token: ${token}`);
+    const { email, newPassword, token } = req.body;
+    if (!newPassword) {
+      res.status(400).json({ ok: false, message: "Password is required" });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log(`email: ${email}, password: ${newPassword}, token: ${token}`);
     let user = await userService.getByEmail(email);
     if (!user) {
       res.status(404).json({ ok: false, message: "User not found" });
