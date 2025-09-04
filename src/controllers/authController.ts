@@ -7,6 +7,7 @@ import { generateToken } from "./verifyToken";
 import { getGoogleUserInfo, GoogleUserInfo } from "../utils/google";
 import { generateOtp } from "../utils/generateOtp";
 import { EmailTemplateEnum } from "@prisma/client";
+import bcrypt from "bcrypt";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
 
@@ -284,6 +285,8 @@ export const resetPassword = async (
 ): Promise<void> => {
   try {
     const { email, password, token } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log(`email: ${email}, password: ${password}, token: ${token}`);
     let user = await userService.getByEmail(email);
     if (!user) {
       res.status(404).json({ ok: false, message: "User not found" });
@@ -291,9 +294,13 @@ export const resetPassword = async (
     }
     const updateUser = await prisma.user.update({
       where: { Id: user.Id },
-      data: { Password: password },
+      data: { Password: hashedPassword },
     });
-    res.json(updateUser);
+    console;
+    res.status(201).json({
+      ok: true,
+      data: { ...updateUser, Token: token },
+    });
   } catch (error) {
     res.status(500).json({
       message: "Something went wrong. Please try again.",
