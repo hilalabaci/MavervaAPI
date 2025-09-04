@@ -239,7 +239,7 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     });
   }
 };
-export const resetPassword = async (
+export const sendResetPasswordLink = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
@@ -251,10 +251,10 @@ export const resetPassword = async (
       return;
     }
     const token = generateToken({ id: user.Id, email: user.Email }, "2h");
-    const continueUrl = encodeURIComponent(
+    const redirectUrl = encodeURIComponent(
       "https://maverva.com/reset-password",
     );
-    const verifyLink = `https://maverva.com/login/reset-password/link?token=${token}&continue=${continueUrl}`;
+    const verifyLink = `https://maverva.com/login/reset-password/continue?token=${token}&redirect=${redirectUrl}&email=${email}`;
 
     await emailService.send({
       templateType: EmailTemplateEnum.SetPassword,
@@ -271,6 +271,29 @@ export const resetPassword = async (
       ok: true,
       message: "Reset password email sent",
     });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong. Please try again.",
+      error: (error as Error).message,
+    });
+  }
+};
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { email, password, token } = req.body;
+    let user = await userService.getByEmail(email);
+    if (!user) {
+      res.status(404).json({ ok: false, message: "User not found" });
+      return;
+    }
+    const updateUser = await prisma.user.update({
+      where: { Id: user.Id },
+      data: { Password: password },
+    });
+    res.json(updateUser);
   } catch (error) {
     res.status(500).json({
       message: "Something went wrong. Please try again.",

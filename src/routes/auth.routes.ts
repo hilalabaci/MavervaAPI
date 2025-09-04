@@ -8,6 +8,7 @@ import {
   login,
   loginGoogle,
   resetPassword,
+  sendResetPasswordLink,
   verifyOtp,
 } from "../controllers/authController";
 
@@ -19,6 +20,7 @@ router.get("/find-user-by-email", findUserByEmail);
 router.post("/login-verification-email", login);
 router.post("/login-google", loginGoogle);
 router.post("/signUp-verification-code", verifyOtp);
-router.post("/reset-password", resetPassword);
+router.post("/send-reset-password-link", sendResetPasswordLink);
+router.put("/reset-password", resetPassword);
 
 export default router;
