@@ -254,7 +254,7 @@ export const resetPassword = async (
     const continueUrl = encodeURIComponent(
       "https://maverva.com/reset-password",
     );
-    const verifyLink = `https://maverva.com/login/resetpassword/link?token=${token}&continue=${continueUrl}`;
+    const verifyLink = `https://maverva.com/login/reset-password/link?token=${token}&continue=${continueUrl}`;
 
     await emailService.send({
       templateType: EmailTemplateEnum.SetPassword,
