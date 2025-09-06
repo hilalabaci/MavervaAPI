@@ -187,6 +187,45 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
   }
 };
+export const loginUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.status(400).json({ message: "All fields are required" });
+      return;
+    }
+    const user = await userService.getByEmail(email);
+    if (user === null) {
+      res.status(404).json({
+        message:
+          "This email is not registered. Create an account to get started.",
+      });
+      return;
+    }
+    if (!user.Password) {
+      res.status(400).json({
+        message: "Please log in with Google or set a password to log in.",
+      });
+      return;
+    }
+    console.log(`user.Password: ${user.Password}`);
+    const isPasswordValid = await bcrypt.compare(password, user.Password);
+    if (!isPasswordValid) {
+      res.status(401).json({ message: "Invalid password" });
+      return;
+    }
+    const token = generateToken({ id: user.Id, email: user.Email }, "2h");
+    res.status(200).json({
+      user,
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Something went wrong. Please try again.",
+      error: (error as Error).message,
+    });
+  }
+};
 
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   try {

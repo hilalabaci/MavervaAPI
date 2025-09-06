@@ -7,6 +7,7 @@ import {
 import {
   login,
   loginGoogle,
+  loginUser,
   resetPassword,
   sendResetPasswordLink,
   verifyOtp,
@@ -19,6 +20,7 @@ router.get("/register", getAllUsers);
 router.get("/find-user-by-email", findUserByEmail);
 router.post("/login-verification-email", login);
 router.post("/login-google", loginGoogle);
+router.post("/login", loginUser);
 router.post("/signUp-verification-code", verifyOtp);
 router.post("/send-reset-password-link", sendResetPasswordLink);
 router.put("/reset-password", resetPassword);
