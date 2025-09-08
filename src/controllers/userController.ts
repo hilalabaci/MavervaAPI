@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { userService } from "../services/userService";
 import dotenv from "dotenv";
-import { ok } from "assert";
 dotenv.config();
 
 export const getAllUsers = async (_: Request, res: Response): Promise<void> => {
@@ -78,12 +77,10 @@ export const findUserByEmail = async (
 ): Promise<void> => {
   try {
     const email = req.query.email as string | undefined;
-    console.log(`: ${email}`);
     if (!email) {
       res.status(400).json({ error: "All fields are required" });
       return;
     }
-    console.log(`: ${email}`);
     const userFound = await userService.getByEmail(email);
     if (userFound === null) {
       res.status(404).json({
@@ -94,7 +91,6 @@ export const findUserByEmail = async (
       });
       return;
     }
-    console.log(`userfound: ${userFound}`);
     res.status(201).json({ ok: true, message: "User created successfully" });
   } catch (err) {
     res.status(500).json({

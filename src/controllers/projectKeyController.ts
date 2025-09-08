@@ -7,7 +7,9 @@ export const createProjectKey = async (
 ): Promise<void> => {
   try {
     //projectKey olusurken hata veriyor cunku ayni key ile baslayan seylerde
+    console.log("Request Query:yyyyyyy", req.query);
     const title = req.query.title as string | undefined;
+    console.log("Titleeeeeeeeeeeeeeee:", title);
     let newProjectKey = "";
     if (!title) {
       res.status(400).json({ message: "Project key is required." });
@@ -35,7 +37,7 @@ export const createProjectKey = async (
     while (!isKeyUnique) {
       const existingProject = await prisma.project.findFirst({
         where: {
-          Key: newProjectKey,
+          Key: uniqueKey,
         },
       });
       if (!existingProject) {

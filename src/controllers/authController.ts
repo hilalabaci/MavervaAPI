@@ -148,7 +148,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           otpCode: otpCode.toString(),
         },
       });
-      console.log("Verification email sent to:", email, otpCode);
       res.status(200).json({
         ok: email,
         message: "Verification email sent to register address.",
@@ -208,7 +207,6 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-    console.log(`user.Password: ${user.Password}`);
     const isPasswordValid = await bcrypt.compare(password, user.Password);
     if (!isPasswordValid) {
       res.status(401).json({ message: "Invalid password" });
@@ -330,7 +328,6 @@ export const resetPassword = async (
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    console.log(`email: ${email}, password: ${newPassword}, token: ${token}`);
     let user = await userService.getByEmail(email);
     if (!user) {
       res.status(404).json({ ok: false, message: "User not found" });
