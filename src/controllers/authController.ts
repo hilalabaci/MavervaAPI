@@ -8,6 +8,7 @@ import { getGoogleUserInfo, GoogleUserInfo } from "../utils/google";
 import { generateOtp } from "../utils/generateOtp";
 import { EmailTemplateEnum } from "@prisma/client";
 import bcrypt from "bcrypt";
+import cookieParser from "cookie-parser";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
 
@@ -186,9 +187,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
   }
 };
+
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
     if (!email || !password) {
       res.status(400).json({ message: "All fields are required" });
       return;
@@ -212,11 +214,22 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       res.status(401).json({ message: "Invalid password" });
       return;
     }
-    const token = generateToken({ id: user.Id, email: user.Email }, "2h");
-    res.status(200).json({
+    const tokenExpiry = rememberMe ? "30d" : "2h";
+    const token = generateToken(
+      { id: user.Id, email: user.Email },
+      tokenExpiry,
+    );
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : undefined, // 30 days in ms
+    };
+    res.cookie("token", token, cookieOptions).status(200).json({
       user,
       token,
     });
+    console.log("User logged in:", user.Email);
+    return;
   } catch (error) {
     res.status(500).json({
       message: "Something went wrong. Please try again.",

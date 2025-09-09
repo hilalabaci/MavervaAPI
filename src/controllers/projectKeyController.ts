@@ -6,10 +6,7 @@ export const createProjectKey = async (
   res: Response,
 ): Promise<void> => {
   try {
-    //projectKey olusurken hata veriyor cunku ayni key ile baslayan seylerde
-    console.log("Request Query:yyyyyyy", req.query);
     const title = req.query.title as string | undefined;
-    console.log("Titleeeeeeeeeeeeeeee:", title);
     let newProjectKey = "";
     if (!title) {
       res.status(400).json({ message: "Project key is required." });
@@ -43,7 +40,6 @@ export const createProjectKey = async (
       if (!existingProject) {
         isKeyUnique = true;
       } else {
-        // Eğer aynı key varsa, sonuna bir sayı ekleyerek benzersiz yap
         uniqueKey = `${newProjectKey}${suffix}`;
         suffix++;
       }
