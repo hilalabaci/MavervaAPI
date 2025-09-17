@@ -8,7 +8,6 @@ import { getGoogleUserInfo, GoogleUserInfo } from "../utils/google";
 import { generateOtp } from "../utils/generateOtp";
 import { EmailTemplateEnum } from "@prisma/client";
 import bcrypt from "bcrypt";
-import cookieParser from "cookie-parser";
 
 const GOOGLE_OAUTH_CLIENTID = process.env.GOOGLE_OAUTH_CLIENTID as string;
 
@@ -241,6 +240,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, otpCode } = req.body;
+
     const otpRecord = await prisma.otpCode.findFirst({
       where: {
         Email: email,
@@ -254,8 +254,13 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
       });
       return;
     }
-    let user = await userService.getByEmail(email);
-    if (!user) return;
+
+    const user = await prisma.user.create({
+      data: {
+        Email: email,
+        FullName: "",
+      },
+    });
     await emailService.send({
       templateType: EmailTemplateEnum.Welcome,
       to: email,
