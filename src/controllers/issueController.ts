@@ -319,3 +319,85 @@ export const deleteIssue = async (
     res.status(500).json({ message: "Error deleting card", error });
   }
 };
+
+export const updateAssignUser = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    let { issueId, assignedToUserId, assignedByUserId } = req.body;
+    const issue = await prisma.issue.findUnique({
+      where: { Id: issueId },
+      include: {
+        Project: true,
+        AssigneeUser: true,
+      },
+    });
+    if (!issue) {
+      res.status(404).json({ message: "Issue not found" });
+      return;
+    }
+    const userProject = await prisma.userProject.findFirst({
+      where: {
+        ProjectId: issue.ProjectId as string,
+        UserId: assignedByUserId as string,
+      },
+      include: { Project: true, User: true },
+    });
+    if (!userProject || !userProject.Project) {
+      res.status(404).json({ message: "Project not found" });
+      return;
+    }
+
+    if (userProject.Role.toLowerCase() !== "admin") {
+      res
+        .status(403)
+        .json({ message: "Only project lead can assignee to issue" });
+      return;
+    }
+
+    const updatedIssue = await prisma.issue.update({
+      where: { Id: issueId },
+      data: { AssigneeUserId: assignedToUserId },
+      include: {
+        ReporterUser: {
+          select: {
+            Id: true,
+            FullName: true,
+            Email: true,
+            ProfilePicture: true,
+          },
+        },
+        AssigneeUser: {
+          select: {
+            Id: true,
+            FullName: true,
+            Email: true,
+            ProfilePicture: true,
+          },
+        },
+      },
+    });
+    const assigningUser = await prisma.user.findUnique({
+      where: { Id: assignedByUserId },
+      select: { Id: true, FullName: true },
+    });
+    if (assignedByUserId !== assignedToUserId) {
+      await prisma.notification.create({
+        data: {
+          ToUserId: assignedToUserId,
+          FromUserId: assignedByUserId,
+          Message: `You have been assigned to the issue in project "${issue.Project.Name}" by ${assigningUser?.FullName}.`,
+          IsRead: false,
+          CreatedAt: new Date(),
+        },
+      });
+    }
+
+    res.json(updatedIssue);
+    return;
+  } catch (error) {
+    // If there's an error during any of the operations, send an error response
+    res.status(500).json({ message: "Error updating card", error });
+  }
+};

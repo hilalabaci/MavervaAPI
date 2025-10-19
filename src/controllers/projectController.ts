@@ -485,3 +485,44 @@ export const deleteProject = async (
     });
   }
 };
+
+export const getUsersByProject = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { projectId } = req.params;
+
+  try {
+    const project = await prisma.project.findUnique({
+      where: { Id: projectId },
+      include: {
+        UserProjects: {
+          include: {
+            User: {
+              select: {
+                Id: true,
+                Email: true,
+                FullName: true,
+                ProfilePicture: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      res.status(404).json({ message: "Project not found" });
+      return;
+    }
+
+    const users = project.UserProjects.map((userProject) => userProject.User);
+
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching users for the project",
+      error: (error as Error).message,
+    });
+  }
+};
