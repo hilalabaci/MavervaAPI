@@ -188,9 +188,18 @@ export const addUserToBoard = async (
 
     const userProject = await prisma.userProject.findFirst({
       where: { ProjectId: projectId, UserId: userId },
-      select: { Role: true },
+      select: { Role: true, UserId: true },
     });
-
+    const addedUserInProject = await prisma.userProject.findFirst({
+      where: { ProjectId: projectId, UserId: addedUser.Id },
+      select: { UserId: true },
+    });
+    if (addedUserInProject) {
+      res.status(400).json({
+        message: "User is already a member of this project.",
+      });
+      return;
+    }
     if (!userProject) {
       res.status(400).json({
         message: "Project not found",
@@ -269,7 +278,6 @@ export const addUserToBoard = async (
       .status(200)
       .json({ message: "User successfully added to boards and project" });
   } catch (err) {
-    // Hata durumunda yakala ve hata mesajı döndür
     console.error("Error adding user to boards:", err);
     res.status(500).json({
       message: "An error occurred while adding user to boards",

@@ -19,6 +19,8 @@ export const getNotification = async (
             Id: true,
             FullName: true,
             Email: true,
+            ProfilePicture: true,
+            Password: false,
           },
         },
       },

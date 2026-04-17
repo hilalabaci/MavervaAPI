@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import expressWs from "express-ws";
 import cors from "cors";
 import routes from "./routes/";
-import { prisma } from "../src/utils/prisma";
+import { prisma } from "./utils/prisma";
 import requestLogger from "./middlewares/requestLogger";
 import errorHandler from "./middlewares/errorHandler";
 
